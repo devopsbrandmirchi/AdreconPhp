@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adrecon — Competitive Spy Intelligence</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface-1:#ffffff;
+  --page:#eef1f2;
+  --header:#0d1117;
+  --ink:#0b0b0b;
+  --ink-2:#52514e;
+  --muted:#898781;
+  --grid:#e1e0d9;
+  --line:#e6e8ea;
+  --border:rgba(11,11,11,0.10);
+  --blue:#2a78d6;
+  --blue-dark:#184f95;
+  --blue-100:#cde2fb;
+  --blue-150:#e6f0fd;
+  --amber:#eda100;
+  --amber-soft:#fbeecb;
+  --good:#0ca30c;
+  --good-ink:#006300;
+  --good-bg:#e6f6e6;
+  --warn:#fab219;
+  --serious:#ec835a;
+  --critical:#d03b3b;
+  --crit-bg:#fbe9e9;
+  --absent:#e9ebee;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(11,11,11,.04), 0 1px 3px rgba(11,11,11,.06);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--page);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+a{color:var(--blue);text-decoration:none;cursor:pointer}
+a:hover{text-decoration:underline}
+.tabular{font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---------- Top bar ---------- */
+header.topbar{
+  background:var(--header);color:#e8eaed;
+  display:flex;align-items:center;gap:28px;
+  padding:0 24px;height:56px;position:sticky;top:0;z-index:50;
+}
+.wordmark{font-weight:800;font-size:19px;letter-spacing:-.4px;color:#fff;cursor:pointer}
+.wordmark span{font-weight:400;color:#aeb4bd}
+.ctx{display:flex;align-items:center;gap:7px;background:#1b222c;border:1px solid #2a2f37;color:#e8eaed;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer}
+.ctx:hover{background:#222a35}
+.ctx .caretdown{color:#8b929c;font-size:10px}
+.meter{display:flex;align-items:center;gap:10px;color:#aeb4bd;font-size:12px}
+.meter.hidden{display:none}
+.meter .lbl{letter-spacing:.14em;font-size:10.5px;color:#8b929c}
+.meter-bar{width:150px;height:5px;border-radius:99px;background:#2a2f37;overflow:hidden}
+.meter-bar > i{display:block;height:100%;width:11%;background:var(--blue);border-radius:99px}
+.meter b{color:#fff;font-weight:600}
+.topbar .right{margin-left:auto;display:flex;align-items:center;gap:20px;font-size:13px;color:#aeb4bd}
+.topbar .right .who{color:#e8eaed}
+.topbar .right a{color:#aeb4bd}
+
+/* ---------- Layout ---------- */
+.wrap{max-width:1200px;margin:0 auto;padding:26px 24px 80px}
+.crumbs{font-size:13px;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:7px}
+.crumbs a{color:var(--ink-2)}
+.crumbs .sep{color:#c7c9cd}
+
+h1.page{font-size:30px;font-weight:800;letter-spacing:-.6px;margin-bottom:5px}
+.sub{color:var(--ink-2);font-size:14.5px}
+.pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+/* chips / pills */
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:99px;background:#f1f3f5;color:var(--ink-2);white-space:nowrap}
+.chip.green{background:var(--good-bg);color:var(--good-ink)}
+.chip.blue{background:var(--blue-150);color:var(--blue-dark)}
+.chip.amber{background:var(--amber-soft);color:#8a6100}
+.chip.red{background:var(--crit-bg);color:#a52a2a}
+.chip.ghost{background:#fff;border:1px solid var(--border)}
+.dot{width:7px;height:7px;border-radius:99px;display:inline-block}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:8px 14px;border-radius:9px;border:1px solid var(--border);background:#fff;color:var(--ink);cursor:pointer;transition:.12s}
+.btn:hover{background:#f6f7f8}
+.btn.dark{background:var(--header);color:#fff;border-color:var(--header)}
+.btn.dark:hover{background:#1b222c}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:#2266bd}
+.btn.sm{padding:6px 11px;font-size:12.5px}
+
+/* cards */
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card.pad{padding:20px}
+.grid{display:grid;gap:16px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.stat{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+.stat .k{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.stat .v{font-size:30px;font-weight:800;letter-spacing:-1px;margin-top:6px}
+.stat .v.blue{color:var(--blue)}
+.stat .v.amber{color:#b97e00}
+.stat .v.green{color:var(--good-ink)}
+.stat .foot{font-size:11.5px;color:var(--muted);margin-top:3px}
+
+.section-t{font-size:15px;font-weight:700;margin:0 0 2px}
+.section-d{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+
+/* tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:22px 0 22px;overflow-x:auto}
+.tab{padding:11px 15px;font-size:13.5px;font-weight:600;color:var(--ink-2);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab .badge{background:#eef1f3;color:var(--ink-2);font-size:11px;padding:1px 7px;border-radius:99px;font-weight:700}
+.tab.active .badge{background:var(--blue-150);color:var(--blue-dark)}
+
+.hidden{display:none !important}
+
+/* client cards (landing) */
+.client-card{padding:20px 22px;cursor:pointer;transition:.12s;position:relative}
+.client-card:hover{border-color:var(--blue);box-shadow:0 4px 14px rgba(42,120,214,.10)}
+.client-card .name{font-size:18px;font-weight:700}
+.client-card .url{font-size:13px;color:var(--blue);margin-top:1px}
+.mini-stats{display:flex;gap:26px;margin-top:16px;flex-wrap:wrap}
+.mini{}
+.mini .mk{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.mini .mv{font-size:20px;font-weight:800;margin-top:2px}
+.cc-foot{display:flex;align-items:center;gap:8px;margin-top:16px}
+
+/* leaderboard */
+.lb{width:100%;border-collapse:collapse;font-size:13.5px}
+.lb th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:0 10px 10px}
+.lb td{padding:11px 10px;border-top:1px solid var(--line);vertical-align:middle}
+.lb tr:hover td{background:#fafbfc}
+.lb .domain{font-weight:600}
+.lb .you{background:var(--blue-150);color:var(--blue-dark);font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:7px}
+.bar{position:relative;height:8px;border-radius:99px;background:var(--absent);overflow:hidden;min-width:120px}
+.bar > i{position:absolute;left:0;top:0;height:100%;border-radius:99px}
+.bar > i.top{background:var(--blue)}
+.bar > i.bot{background:var(--amber)}
+
+/* heatmap */
+.heat{overflow-x:auto}
+.heat table{border-collapse:separate;border-spacing:3px;font-size:12px}
+.heat .adv{text-align:left;color:var(--ink-2);padding-right:12px;white-space:nowrap;font-weight:500}
+.heat .time{color:var(--muted);font-size:10.5px;text-align:center;padding-bottom:2px;font-variant-numeric:tabular-nums}
+.cell{width:30px;height:22px;border-radius:5px;background:var(--absent)}
+.cell.top{background:var(--blue)}
+.cell.bot{background:var(--amber)}
+.cov{font-weight:700;padding-left:10px;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--ink-2);align-items:center}
+
+/* ad list */
+.adcard{padding:0}
+.adcard .h{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--line)}
+.adrow{display:flex;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line)}
+.adrow:last-child{border-bottom:0}
+.adrow .rank{width:22px;height:22px;border-radius:6px;background:#eef1f3;color:var(--ink-2);font-size:12px;font-weight:700;display:grid;place-items:center;flex:none}
+.adrow .dom{font-weight:600;color:var(--blue)}
+.adrow .desc{color:var(--ink-2);font-size:12.5px}
+
+/* cluster accordion */
+.cluster{margin-bottom:14px}
+.cluster .ch{display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer}
+.cluster .ch:hover{background:#fafbfc}
+.cluster .caret{transition:.15s;color:var(--muted);font-size:12px}
+.cluster.open .caret{transform:rotate(90deg)}
+.cluster .cname{font-weight:700;font-size:15px}
+.cluster .cmeta{color:var(--muted);font-size:12.5px}
+.cluster .cbody{display:none;border-top:1px solid var(--line)}
+.cluster.open .cbody{display:block}
+.kw{display:flex;align-items:center;gap:14px;padding:12px 18px 12px 40px;border-bottom:1px solid var(--line);font-size:13px}
+.kw:last-child{border-bottom:0}
+.kw:hover{background:#fafbfc}
+.kw .kwn{font-weight:600;min-width:190px}
+.kw .locs{color:var(--muted);font-size:12px}
+.kw .spacer{margin-left:auto}
+
+/* gaps */
+.gap-item{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.gap-item:last-child{border-bottom:0}
+.gap-ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;font-size:16px}
+.gap-ico.red{background:var(--crit-bg)}
+.gap-ico.amber{background:var(--amber-soft)}
+.gap-ico.blue{background:var(--blue-150)}
+
+/* alerts */
+.alert{display:flex;gap:13px;padding:14px 0;border-bottom:1px solid var(--line)}
+.alert:last-child{border-bottom:0}
+.alert .tag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;height:fit-content;white-space:nowrap}
+.alert .tag.in{background:var(--crit-bg);color:#a52a2a}
+.alert .tag.out{background:var(--good-bg);color:var(--good-ink)}
+.alert .tag.mv{background:var(--amber-soft);color:#8a6100}
+.alert .when{color:var(--muted);font-size:12px;margin-top:2px}
+
+/* coverage map */
+.mapwrap{position:relative;background:linear-gradient(180deg,#f4f7fa,#eef2f6);border-radius:12px;height:420px;overflow:hidden;border:1px solid var(--line)}
+.pin{position:absolute;transform:translate(-50%,-50%);text-align:center}
+.pin .ring{width:var(--r,40px);height:var(--r,40px);border-radius:99px;border:2px solid;display:grid;place-items:center;margin:0 auto}
+.pin .lbl{font-size:10.5px;margin-top:3px;color:var(--ink-2);font-weight:600;white-space:nowrap;text-shadow:0 1px 2px #fff}
+.pin .cd{width:9px;height:9px;border-radius:99px}
+
+/* form */
+.field{margin-bottom:18px}
+.field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
+.field .hint{font-size:11.5px;color:var(--muted);font-weight:400;margin-top:5px}
+.input,textarea,select{width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 11px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--ink)}
+textarea{min-height:96px;resize:vertical}
+.input:focus,textarea:focus,select:focus{outline:2px solid var(--blue-100);border-color:var(--blue)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.usage-note{display:flex;align-items:center;gap:10px;background:var(--blue-150);border:1px solid #cfe0f6;border-radius:10px;padding:12px 15px;font-size:13px;color:var(--blue-dark);margin-top:6px}
+
+/* cluster pick */
+.cluster-pick{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.cpick{border:1px solid var(--border);border-radius:10px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;background:#fff;transition:.12s}
+.cpick:hover{border-color:var(--blue)}
+.cpick.sel{border-color:var(--blue);background:var(--blue-150);color:var(--blue-dark)}
+.cpick small{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:2px}
+.cpick.sel small{color:var(--blue-dark)}
+
+.callout{background:#fbfaf7;border:1px dashed var(--border);border-radius:10px;padding:13px 15px;font-size:12.5px;color:var(--ink-2)}
+.note-new{background:var(--good-bg);border:1px solid #bfe6bf;border-radius:8px;padding:2px 8px;font-size:10.5px;font-weight:700;color:var(--good-ink);display:inline-block}
+
+/* competitive matrix */
+.matrix{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.matrix th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;padding:8px 8px;text-align:center;white-space:nowrap}
+.matrix th.adv,.matrix td.adv{text-align:left;white-space:nowrap;font-weight:600}
+.matrix td{padding:6px 8px;border-top:1px solid var(--line);text-align:center}
+.matrix tr.you td{background:var(--blue-150)}
+.matrix tr.you td.adv{color:var(--blue-dark)}
+.mcell{display:inline-block;min-width:46px;border-radius:6px;padding:5px 0;font-weight:700;font-variant-numeric:tabular-nums}
+.lead{position:relative}
+.lead::after{content:"★";color:var(--amber);font-size:11px;margin-left:3px;vertical-align:top}
+.vd{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.vd.ahead{background:var(--crit-bg);color:#a52a2a}
+.vd.even{background:var(--amber-soft);color:#8a6100}
+.vd.behind{background:var(--good-bg);color:var(--good-ink)}
+.vd.low{background:#f1f3f5;color:var(--muted)}
+.h2h{display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 18px}
+.h2h .u{font-size:12px;color:var(--muted)}
+.h2h .u b{display:block;font-size:22px;color:var(--ink);font-weight:800;margin-top:2px}
+.h2h .u b.win{color:var(--good-ink)}
+.h2h .u b.lose{color:var(--critical)}
+
+/* agencies */
+.agency-row{display:flex;align-items:center;gap:18px;padding:18px 22px;cursor:pointer;border-bottom:1px solid var(--line)}
+.agency-row:last-child{border-bottom:0}
+.agency-row:hover{background:#fafbfc}
+.agency-ico{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;font-size:18px;font-weight:800;color:#fff;flex:none}
+.agency-name{font-size:16px;font-weight:700}
+.agency-sub{font-size:12.5px;color:var(--muted)}
+.agency-metric{text-align:right;min-width:96px}
+.agency-metric .m{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.agency-metric .n{font-size:17px;font-weight:800;margin-top:1px}
+.qbar{width:150px;height:6px;border-radius:99px;background:var(--absent);overflow:hidden;margin-top:6px}
+.qbar > i{display:block;height:100%;border-radius:99px;background:var(--blue)}
+.qbar > i.warn{background:var(--warn)}
+.qbar > i.over{background:var(--critical)}
+
+/* search + client table */
+.toolbar{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.search{flex:1;min-width:220px;position:relative}
+.search input{width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 12px 9px 34px;font-size:13.5px;background:#fff;font-family:inherit}
+.search input:focus{outline:2px solid var(--blue-100);border-color:var(--blue)}
+.search .mag{position:absolute;left:11px;top:9px;color:var(--muted)}
+.ctable{width:100%;border-collapse:collapse;font-size:13.5px}
+.ctable thead th{position:sticky;top:56px;background:var(--surface-1);text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+.ctable thead th:hover{color:var(--ink)}
+.ctable td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.ctable tbody tr{cursor:pointer}
+.ctable tbody tr:hover td{background:#fafbfc}
+.ctable .cname{font-weight:600}
+.ctable .curl{font-size:11.5px;color:var(--muted)}
+.usebar{width:96px;height:6px;border-radius:99px;background:var(--absent);overflow:hidden;display:inline-block;vertical-align:middle;margin-right:8px}
+.usebar > i{display:block;height:100%;border-radius:99px;background:var(--blue)}
+.usebar > i.warn{background:var(--warn)}
+.usebar > i.over{background:var(--critical)}
+.st-dot{display:inline-flex;align-items:center;gap:6px;font-size:12.5px}
+
+@media(max-width:820px){.stat-row{grid-template-columns:repeat(2,1fr)}.two-col,.row3{grid-template-columns:1fr}}
+
+/* --- add-keywords builder --- */
+.step-h{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.step-n{width:26px;height:26px;border-radius:99px;background:var(--blue);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center;flex:none}
+.seg{display:inline-flex;background:#eef1f3;border-radius:10px;padding:3px;gap:3px;margin-bottom:16px}
+.seg-btn{border:0;background:transparent;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;font-family:inherit}
+.seg-btn.active{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+.lib-clusters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.lib-cl{padding:6px 13px;border:1px solid var(--border);border-radius:99px;font-size:12.5px;font-weight:600;cursor:pointer;background:#fff}
+.lib-cl:hover{border-color:var(--blue)}
+.lib-cl.active{background:var(--blue-150);border-color:var(--blue);color:var(--blue-dark)}
+.libitem{display:flex;align-items:center;gap:11px;padding:10px 6px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px}
+.libitem:last-child{border-bottom:0}
+.libitem:hover{background:#fafbfc}
+.libitem input{width:16px;height:16px;accent-color:var(--blue);cursor:pointer}
+.libitem .added{margin-left:auto;font-size:11px;color:var(--good-ink);font-weight:600}
+.chipwrap{display:flex;gap:8px;flex-wrap:wrap}
+.kwchip{display:inline-flex;align-items:center;gap:8px;background:var(--blue-150);color:var(--blue-dark);border-radius:99px;padding:6px 11px;font-size:12.5px;font-weight:600}
+.kwchip small{font-weight:400;opacity:.7}
+.kwchip b,.locchip b{cursor:pointer;opacity:.55;font-weight:700}
+.kwchip b:hover,.locchip b:hover{opacity:1}
+.locchip{display:inline-flex;align-items:center;gap:8px;background:#eef1f3;color:var(--ink-2);border-radius:99px;padding:6px 11px;font-size:12.5px;font-weight:600}
+.muted-note{color:var(--muted);font-size:12.5px}
+.sum-big{font-size:34px;font-weight:800;letter-spacing:-1px;margin-top:8px;color:var(--blue);line-height:1}
+.sum-eq{font-size:12.5px;color:var(--muted);margin:4px 0 16px}
+.sum-rows>div{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+.sum-rows>div span{color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wordmark" onclick="show('agencies')">Ad<span>recon</span></div>
+  <div class="ctx" id="ctx" onclick="show('agencies')" title="Switch agency">
+    <span id="ctxName">All agencies</span>
+    <span class="caretdown">▾</span>
+  </div>
+  <div class="meter" id="meter">
+    <span class="lbl">SEARCHES</span>
+    <span class="meter-bar"><i id="meterFill"></i></span>
+    <span id="meterTxt"><b>—</b></span>
+  </div>
+  <div class="right">
+    <span class="who">avi · admin</span>
+    <a>Sign out</a>
+  </div>
+</header>
+
+<!-- ============================ AGENCIES (true landing) ============================ -->
+<div id="view-agencies" class="wrap">
+  <div class="pagehead" style="margin-bottom:22px">
+    <div>
+      <h1 class="page">Agencies &amp; owners</h1>
+      <div class="sub">3 agencies · 71 accounts · each has its own search plan &nbsp;·&nbsp; <span style="color:var(--blue)">visible to admins only</span></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="show('access')">Users &amp; access</button>
+      <button class="btn dark">+ Add agency</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <!-- Wheeler -->
+    <div class="agency-row" onclick="openAgency('wheeler')">
+      <div class="agency-ico" style="background:#2a78d6">W</div>
+      <div style="flex:1">
+        <div class="agency-name">Wheeler Auto Group <span class="chip" style="vertical-align:middle">Agency</span></div>
+        <div class="agency-sub">50 accounts · 47 running · mixed verticals</div>
+      </div>
+      <div class="agency-metric"><div class="m">Searches this mo</div><div class="n tabular">6,240 <span style="color:var(--muted);font-weight:500;font-size:12px">/ 12,000</span></div>
+        <div class="qbar"><i style="width:52%"></i></div></div>
+      <div class="agency-metric"><div class="m">Projected</div><div class="n tabular" style="color:#b97e00">11,400</div></div>
+      <a>Open →</a>
+    </div>
+    <!-- RCS -->
+    <div class="agency-row" onclick="openAgency('rcs')">
+      <div class="agency-ico" style="background:#eb6834">R</div>
+      <div style="flex:1">
+        <div class="agency-name">RCS — Red Castle Services <span class="chip" style="vertical-align:middle">Agency</span></div>
+        <div class="agency-sub">20 accounts · 18 running · home services</div>
+      </div>
+      <div class="agency-metric"><div class="m">Searches this mo</div><div class="n tabular">1,180 <span style="color:var(--muted);font-weight:500;font-size:12px">/ 4,000</span></div>
+        <div class="qbar"><i style="width:30%"></i></div></div>
+      <div class="agency-metric"><div class="m">Projected</div><div class="n tabular" style="color:var(--good-ink)">3,200</div></div>
+      <a>Open →</a>
+    </div>
+    <!-- solo owner -->
+    <div class="agency-row" onclick="openAgency('novak')">
+      <div class="agency-ico" style="background:#1baf7a">N</div>
+      <div style="flex:1">
+        <div class="agency-name">Novak Motors <span class="chip green" style="vertical-align:middle">Solo owner</span></div>
+        <div class="agency-sub">1 account · running · auto dealer</div>
+      </div>
+      <div class="agency-metric"><div class="m">Searches this mo</div><div class="n tabular">1,240 <span style="color:var(--muted);font-weight:500;font-size:12px">/ 5,000</span></div>
+        <div class="qbar"><i style="width:25%"></i></div></div>
+      <div class="agency-metric"><div class="m">Projected</div><div class="n tabular" style="color:var(--good-ink)">3,900</div></div>
+      <a>Open →</a>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:20px">
+    <b>New hierarchy:</b> Agency → accounts (clients) → clusters → terms → locations. The search plan lives at the
+    <b>agency</b> level. Mckibben and A&amp;L RV are now accounts inside <b>Wheeler</b>; a "Solo owner" (Novak Motors)
+    is just an agency with one account. This whole screen is admin-only — see <b>Users &amp; access</b> for how scoped users work.
+  </div>
+</div>
+
+<!-- ============================ AGENCY → CLIENTS (scalable) ============================ -->
+<div id="view-clients" class="wrap hidden">
+  <div class="crumbs"><a onclick="show('agencies')">Agencies</a><span class="sep">/</span><span id="agCrumb">Wheeler Auto Group</span></div>
+  <div class="pagehead" style="margin-bottom:18px">
+    <div>
+      <h1 class="page" id="agTitle">Wheeler Auto Group</h1>
+      <div class="sub" id="agSub">50 accounts · 47 running · agency plan 12,000 searches/mo</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" onclick="show('add')">🔍 One-Click Spy</button>
+      <button class="btn dark">+ Add account</button>
+    </div>
+  </div>
+
+  <div class="stat-row" style="margin-bottom:20px">
+    <div class="stat"><div class="k">Agency plan used</div><div class="v blue" id="agUsed">6,240</div><div class="foot" id="agUsedFoot">of 12,000 searches this month</div></div>
+    <div class="stat"><div class="k">Projected month</div><div class="v amber" id="agProj">11,400</div><div class="foot">at current cadence · within plan</div></div>
+    <div class="stat"><div class="k">Accounts running</div><div class="v">47<span style="font-size:16px;color:var(--muted)"> / 50</span></div><div class="foot">3 paused or not set up</div></div>
+    <div class="stat"><div class="k">Monthly cap</div><div class="v">12,000</div><div class="foot">auto-pause on · 52% used</div></div>
+  </div>
+
+  <div class="card pad" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+      <div><div class="section-t">Usage &amp; limits (agency)</div>
+        <div class="section-d" style="margin:0">Guardrails so a bad keyword × frequency setup can’t run away with your search spend.</div></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;white-space:nowrap"><input type="checkbox" checked> Auto-pause ALL scans when cap is reached</label>
+    </div>
+    <div style="margin-top:14px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Monthly search cap</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px"><input class="input" style="width:110px" value="12,000"><span style="font-size:12px;color:var(--muted)">6,240 used · 11,400 projected this month</span></div>
+      <div class="qbar" style="width:300px;margin-top:8px"><i style="width:52%"></i></div>
+    </div>
+    <div style="margin-top:16px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Cost per search <span class="chip" style="background:#fbe9e9;color:#a52a2a;vertical-align:middle;padding:1px 8px;text-transform:none;font-weight:700">🔒 Super-admin only</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:5px"><span style="color:var(--muted)">$</span><input class="input" style="width:90px" value="0.006"><span style="font-size:12px;color:var(--muted)">× 6,240 searches used ≈ <b style="color:var(--ink)">$37.44</b> so far this month</span></div>
+    </div>
+    <div style="margin-top:16px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Allowed scan frequencies</div>
+      <div class="cluster-pick">
+        <div class="cpick" style="opacity:.5">1 hour<small>disabled</small></div>
+        <div class="cpick sel">3 hours</div>
+        <div class="cpick sel">6 hours</div>
+        <div class="cpick" style="opacity:.5">12 hours<small>off</small></div>
+        <div class="cpick sel">Daily</div>
+        <div class="cpick sel">Weekly</div>
+      </div>
+      <div class="section-d" style="margin-top:8px">Turn a frequency off and it won’t be selectable when adding keywords. Individual accounts can be restricted further — never broader.</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search"><span class="mag">⌕</span><input id="clientSearch" placeholder="Search 50 accounts by name or website…" oninput="filterClients()"></div>
+    <select class="input" style="width:auto" onchange="filterClients()" id="statusFilter">
+      <option value="">All statuses</option><option value="running">Running</option><option value="paused">Paused / no setup</option>
+    </select>
+    <span class="chip ghost" id="clientCount">50 accounts</span>
+  </div>
+
+  <div class="card" style="overflow:hidden">
+    <table class="ctable">
+      <thead><tr>
+        <th onclick="sortClients('name')">Account</th>
+        <th onclick="sortClients('status')">Status</th>
+        <th onclick="sortClients('show')">Your show-rate</th>
+        <th onclick="sortClients('comp')" style="text-align:center">Competitors</th>
+        <th onclick="sortClients('sched')">Scheduled / mo</th>
+        <th onclick="sortClients('done')">Done this mo</th>
+        <th onclick="sortClients('checked')">Last checked</th>
+      </tr></thead>
+      <tbody id="clientRows"></tbody>
+    </table>
+  </div>
+  <div class="callout" style="margin-top:16px"><b>Scales to 100+:</b> searchable, sortable table instead of cards. Per-account
+    columns show <b>scheduled searches/mo</b> (what its config will consume) and <b>done this month</b> — those roll up into the agency plan meter at the top.</div>
+</div>
+
+<!-- ============================ CLIENT DASHBOARD ============================ -->
+<div id="view-client" class="wrap hidden">
+  <div class="crumbs" id="clientCrumb"><a onclick="show('agencies')">Agencies</a><span class="sep">/</span><a onclick="openAgency('wheeler')">Wheeler Auto Group</a><span class="sep">/</span><span>Mckibben Powersports</span></div>
+
+  <div class="pagehead">
+    <div>
+      <h1 class="page" id="clientTitle">Mckibben Powersports</h1>
+      <div class="sub">Polaris / powersports dealer · Bartow, FL and 12 nearby areas · checked every 6 hours</div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="chip green"><span class="dot" style="background:var(--good)"></span>53 running</span>
+        <span class="chip">2 clusters</span>
+        <span class="chip">7 competitors seen</span>
+        <span class="chip blue">Scheduled 6,360 / mo</span>
+        <span class="chip amber">548 done this month</span>
+        <span class="chip ghost">last full scan Jul 29, 06:20</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn">Check now</button>
+      <button class="btn dark" onclick="show('add')">+ Add keywords</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="overview" onclick="clientTab('overview')">Overview</div>
+    <div class="tab" data-tab="clusters" onclick="clientTab('clusters')">Clusters &amp; terms <span class="badge">2</span></div>
+    <div class="tab" data-tab="competitors" onclick="clientTab('competitors')">Competitors <span class="badge">7</span></div>
+    <div class="tab" data-tab="map" onclick="clientTab('map')">Coverage map</div>
+  </div>
+
+  <!-- ---- OVERVIEW TAB ---- -->
+  <div class="ctab" data-pane="overview">
+    <div class="stat-row" style="margin-bottom:20px">
+      <div class="stat"><div class="k">Your show-rate</div><div class="v blue">58%</div><div class="foot">you appear in 31 of 53 tracked checks</div></div>
+      <div class="stat"><div class="k">Competitors seen</div><div class="v">7</div><div class="foot">unique advertisers across all terms</div></div>
+      <div class="stat"><div class="k">Always-on rivals</div><div class="v amber">1</div><div class="foot">present in &gt;75% of checks</div></div>
+      <div class="stat"><div class="k">Open gaps</div><div class="v" style="color:var(--critical)">4</div><div class="foot">term × area where rivals show, you don't</div></div>
+    </div>
+
+    <div class="card pad" style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div><div class="section-t">Account limits &amp; lifecycle</div>
+          <div class="section-d" style="margin:0">Overrides within the agency policy — tighten this account, never loosen past what the agency allows.</div></div>
+        <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+          <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Monthly cap</div>
+            <div style="font-weight:700;margin-top:2px">2,000 <span style="color:var(--muted);font-weight:400;font-size:12px">/ agency 12,000</span></div></div>
+          <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Allowed frequency</div>
+            <div style="display:flex;gap:6px"><span class="chip">6 hours</span><span class="chip">Daily</span><span class="chip ghost">+ edit</span></div></div>
+          <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Cost override <span style="text-transform:none;color:#a52a2a" title="Super-admin only">🔒</span></div>
+            <div style="font-weight:700;margin-top:2px;color:var(--muted)">— <span style="font-weight:400;font-size:12px">uses agency $0.006</span></div></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Scan lifecycle <span style="text-transform:none;color:var(--blue)">(auto-decay)</span></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;flex-wrap:wrap">
+            <span class="chip blue">Intensive · 6h</span><span style="color:var(--muted)">→</span>
+            <span class="chip">Weekly at day 60</span><span style="color:var(--muted)">→</span>
+            <span class="chip amber">Pause at day 90</span>
+            <span class="chip ghost">+ edit days</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:var(--ink-2)"><b>Day 42 of 90</b> · steps down to weekly in 18 days</div>
+          <div class="qbar" style="width:220px;margin:6px 0 0 auto"><i style="width:47%"></i></div>
+          <button class="btn sm" style="margin-top:8px">↻ Renew — reset to day 0</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1.4fr 1fr;align-items:start">
+      <!-- top competitors -->
+      <div class="card pad">
+        <div class="section-t">Top competitors by coverage</div>
+        <div class="section-d">Share of the 53 checks in the last 7 days where each advertiser appeared. Blue = top of page, amber = bottom.</div>
+        <table class="lb">
+          <thead><tr><th>Advertiser</th><th style="width:180px">Coverage</th><th>Consistency</th><th style="text-align:right">Avg pos</th></tr></thead>
+          <tbody>
+            <tr><td class="domain">mckibbenpowersportslakewales.com <span class="you">YOU</span></td><td><div class="bar"><i class="top" style="width:64%"></i><i class="bot" style="left:64%;width:16%"></i></div></td><td><span class="chip green">Most checks · 80%</span></td><td style="text-align:right" class="tabular">2.7</td></tr>
+            <tr><td class="domain">skypowersportslakeland.com</td><td><div class="bar"><i class="top" style="width:52%"></i><i class="bot" style="left:52%;width:8%"></i></div></td><td><span class="chip amber">Intermittent · 60%</span></td><td style="text-align:right" class="tabular">1.7</td></tr>
+            <tr><td class="domain">brp.com</td><td><div class="bar"><i class="top" style="width:50%"></i></div></td><td><span class="chip amber">Intermittent · 50%</span></td><td style="text-align:right" class="tabular">1.4</td></tr>
+            <tr><td class="domain">mykissimmeemotorsports.com</td><td><div class="bar"><i class="top" style="width:34%"></i><i class="bot" style="left:34%;width:16%"></i></div></td><td><span class="chip amber">Intermittent · 50%</span></td><td style="text-align:right" class="tabular">3.5</td></tr>
+            <tr><td class="domain">polaris.com</td><td><div class="bar"><i class="top" style="width:22%"></i><i class="bot" style="left:22%;width:8%"></i></div></td><td><span class="chip">Intermittent · 30%</span></td><td style="text-align:right" class="tabular">4.0</td></tr>
+            <tr><td class="domain">gableswc.com</td><td><div class="bar"><i class="bot" style="width:10%"></i></div></td><td><span class="chip">Rare · 10%</span></td><td style="text-align:right" class="tabular">—</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px"><a onclick="clientTab('competitors')">See all 7 competitors →</a></div>
+      </div>
+
+      <!-- biggest gaps -->
+      <div class="card pad">
+        <div class="section-t">Biggest openings</div>
+        <div class="section-d">Where rivals advertise and you're not observed — your best places to win.</div>
+        <div class="gap-item">
+          <div class="gap-ico red">◎</div>
+          <div><div style="font-weight:600">"polaris ranger for sale" · Dundee, FL</div><div style="font-size:12px;color:var(--muted)">3 rivals show here — you're absent all 10 checks</div></div>
+        </div>
+        <div class="gap-item">
+          <div class="gap-ico red">◎</div>
+          <div><div style="font-weight:600">"polaris for sale" · Frostproof, FL</div><div style="font-size:12px;color:var(--muted)">Sky Powersports owns top — you never appear</div></div>
+        </div>
+        <div class="gap-item">
+          <div class="gap-ico amber">△</div>
+          <div><div style="font-weight:600">"polaris dealer near me" · Lake Wales</div><div style="font-size:12px;color:var(--muted)">You show 30% — budget likely capping before evening</div></div>
+        </div>
+        <div class="gap-item">
+          <div class="gap-ico blue">◔</div>
+          <div><div style="font-weight:600">Bing — not yet scanned</div><div style="font-size:12px;color:var(--muted)">Upgrade to add the Bing lane for these terms</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:20px">
+      <div class="section-t">AI Summary <span class="note-new">grounded in the numbers</span></div>
+      <div class="section-d">Head-to-head competitive read of this account, written strictly from the observed show-rates below.</div>
+
+      <!-- head to head counts -->
+      <div class="h2h">
+        <div class="u">You showed up<b>31×</b></div>
+        <div class="u">Sky Powersports<b class="lose">34×</b></div>
+        <div class="u">BRP<b>26×</b></div>
+        <div class="u">My Kissimmee<b>24×</b></div>
+        <div class="u">Polaris.com<b>14×</b></div>
+        <div class="u" style="margin-left:auto;text-align:right">out of 53 tracked checks · last 7 days</div>
+      </div>
+
+      <p style="color:var(--ink-2);font-size:13.5px;line-height:1.7;margin-bottom:18px">
+        <b>Sky Powersports (Lakeland) is your #1 rival</b> — it edges you overall (showed 34× vs your 31×) and
+        consistently ranks above you (avg 1.7 vs 2.7). But the fight splits sharply by cluster: <b>you own Dealer intent</b>
+        (you lead at 71% show-rate), while <b>you're weak on Purchase intent</b> — there <b>My Kissimmee (55%) and Sky (50%)
+        both beat you (42%)</b>, mostly in the outer towns (Dundee, Frostproof) where you're often absent.
+        <b>BRP.com</b> bids the category nationally and is roughly even with you. <b>Polaris.com</b> is a low, occasional threat.
+        Clearest move: push the <b>Purchase-intent</b> budget and geo into those outer towns before the next scan.
+      </p>
+
+      <!-- who's strong / weak by cluster -->
+      <div style="overflow-x:auto">
+      <table class="matrix">
+        <thead><tr>
+          <th class="adv">Advertiser</th>
+          <th>Dealer<br>intent</th>
+          <th>Purchase<br>intent</th>
+          <th>Overall</th>
+          <th style="text-align:right">Verdict vs you</th>
+        </tr></thead>
+        <tbody>
+          <tr class="you">
+            <td class="adv">You (Mckibben)</td>
+            <td><span class="mcell lead" style="background:#5598e7;color:#fff">71%</span></td>
+            <td><span class="mcell" style="background:#cde2fb">42%</span></td>
+            <td><span class="mcell" style="background:#9ec5f4">57%</span></td>
+            <td style="text-align:right"><span class="vd" style="background:#fff;border:1px solid var(--border);color:var(--ink-2)">baseline</span></td>
+          </tr>
+          <tr>
+            <td class="adv">Sky Powersports</td>
+            <td><span class="mcell" style="background:#5598e7;color:#fff">68%</span></td>
+            <td><span class="mcell" style="background:#9ec5f4">50%</span></td>
+            <td><span class="mcell lead" style="background:#5598e7;color:#fff">59%</span></td>
+            <td style="text-align:right"><span class="vd ahead">Ahead overall — top rival</span></td>
+          </tr>
+          <tr>
+            <td class="adv">BRP.com</td>
+            <td><span class="mcell" style="background:#9ec5f4">55%</span></td>
+            <td><span class="mcell" style="background:#9ec5f4">45%</span></td>
+            <td><span class="mcell" style="background:#9ec5f4">50%</span></td>
+            <td style="text-align:right"><span class="vd even">Roughly even</span></td>
+          </tr>
+          <tr>
+            <td class="adv">My Kissimmee</td>
+            <td><span class="mcell" style="background:#cde2fb">40%</span></td>
+            <td><span class="mcell lead" style="background:#9ec5f4">55%</span></td>
+            <td><span class="mcell" style="background:#cde2fb">48%</span></td>
+            <td style="text-align:right"><span class="vd ahead">Beats you on Purchase</span></td>
+          </tr>
+          <tr>
+            <td class="adv">Polaris.com</td>
+            <td><span class="mcell" style="background:#cde2fb">30%</span></td>
+            <td><span class="mcell" style="background:#eef4fd">25%</span></td>
+            <td><span class="mcell" style="background:#eef4fd">28%</span></td>
+            <td style="text-align:right"><span class="vd low">Low threat</span></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:10px">★ = cluster leader · darker = higher show-rate · your row highlighted. You lead <b>Dealer intent</b>; you trail on <b>Purchase intent</b>.</div>
+    </div>
+  </div>
+
+  <!-- ---- CLUSTERS TAB ---- -->
+  <div class="ctab hidden" data-pane="clusters">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div><div class="section-t">Search terms, grouped by intent cluster</div>
+      <div class="section-d" style="margin:0">The new cluster layer. Terms with the same buyer intent sit together, so results roll up by cluster instead of a flat list of 53 rows.</div></div>
+      <button class="btn dark" onclick="show('add')">+ Add keywords</button>
+    </div>
+
+    <!-- cluster 1 -->
+    <div class="card cluster open">
+      <div class="ch" onclick="toggleCluster(this)">
+        <span class="caret">▶</span>
+        <div><span class="cname">Dealer intent</span> &nbsp; <span class="chip blue" style="vertical-align:middle">2 terms · 21 checks</span></div>
+        <div class="cmeta spacer" style="margin-left:auto">You show 71% · avg pos 2.4</div>
+      </div>
+      <div class="cbody">
+        <div class="kw"><span class="kwn">polaris dealer</span><span class="locs">13 locations · Desktop · every 6h</span><span class="chip green spacer">4 top, 2 bottom</span><a onclick="event.stopPropagation();openResult()">See results →</a></div>
+        <div class="kw"><span class="kwn">polaris dealer near me</span><span class="locs">8 locations · Desktop · every 6h</span><span class="chip green spacer">3 top, 2 bottom</span><a onclick="event.stopPropagation();openResult()">See results →</a></div>
+      </div>
+    </div>
+
+    <!-- cluster 2 -->
+    <div class="card cluster">
+      <div class="ch" onclick="toggleCluster(this)">
+        <span class="caret">▶</span>
+        <div><span class="cname">Purchase intent</span> &nbsp; <span class="chip blue" style="vertical-align:middle">3 terms · 29 checks</span></div>
+        <div class="cmeta spacer" style="margin-left:auto">You show 42% · avg pos 3.1</div>
+      </div>
+      <div class="cbody">
+        <div class="kw"><span class="kwn">polaris for sale</span><span class="locs">8 locations · Desktop · every 6h</span><span class="chip amber spacer">3 top, 1 bottom</span><a onclick="event.stopPropagation();openResult()">See results →</a></div>
+        <div class="kw"><span class="kwn">polaris ranger for sale</span><span class="locs">8 locations · Desktop · every 6h</span><span class="chip red spacer">no ads (2 areas)</span><a onclick="event.stopPropagation();openResult()">See results →</a></div>
+        <div class="kw"><span class="kwn">polaris RZR for sale</span><span class="locs">13 locations · Desktop · every 6h</span><span class="chip green spacer">2 top, 1 bottom</span><a onclick="event.stopPropagation();openResult()">See results →</a></div>
+      </div>
+    </div>
+
+    <!-- no cluster -->
+    <div class="card cluster">
+      <div class="ch" onclick="toggleCluster(this)">
+        <span class="caret">▶</span>
+        <div><span class="cname" style="color:var(--muted)">No cluster</span> &nbsp; <span class="chip" style="vertical-align:middle">0 terms</span></div>
+        <div class="cmeta spacer" style="margin-left:auto">Ungrouped terms land here</div>
+      </div>
+      <div class="cbody">
+        <div class="kw" style="color:var(--muted)"><span>No ungrouped terms. Terms added without a cluster show up here and can be dragged into one later.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- COMPETITORS TAB ---- -->
+  <div class="ctab hidden" data-pane="competitors">
+    <!-- your domain (required) -->
+    <div class="card pad" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <div class="section-t">Your domain <span class="chip red" style="vertical-align:middle">Required</span></div>
+          <div class="section-d" style="margin:0">This is the "you" every metric is measured against. An account can't run a scan without it.</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700;font-size:15px;color:var(--blue)">mckibbenpowersports.com &nbsp;<span class="chip green" style="vertical-align:middle">✓ set</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">also owns: mckibbenpowersportslakewales.com · mckibbenpowersportssebring.com</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- competitors you track -->
+    <div class="card pad" style="margin-bottom:16px">
+      <div class="section-t">Competitors you're tracking</div>
+      <div class="section-d">Domains you've told Adrecon to watch. These are always compared head-to-head with you, even in weeks they don't show. Adding more never costs extra.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <span class="chip blue">skypowersportslakeland.com <b style="margin-left:5px;cursor:pointer">×</b></span>
+        <span class="chip blue">mykissimmeemotorsports.com <b style="margin-left:5px;cursor:pointer">×</b></span>
+        <span class="chip blue">brp.com <b style="margin-left:5px;cursor:pointer">×</b></span>
+      </div>
+      <div style="display:flex;gap:8px;max-width:460px">
+        <input class="input" placeholder="Add a competitor domain — e.g. tampapowersports.com">
+        <button class="btn dark" style="white-space:nowrap">+ Track</button>
+      </div>
+    </div>
+
+    <!-- full leaderboard -->
+    <div class="section-t">Full advertiser leaderboard <span class="chip" style="vertical-align:middle">7 seen</span></div>
+    <div class="section-d">Everyone observed across all clusters and locations. Your tracked competitors are always here; the rest are auto-discovered and can be promoted to tracked. One search returns every advertiser, so this costs nothing extra.</div>
+    <div class="card pad">
+      <table class="lb">
+        <thead><tr><th>Advertiser</th><th style="width:200px">Coverage (7d)</th><th>Consistency</th><th style="text-align:center">Top</th><th style="text-align:center">Bottom</th><th style="text-align:right">Avg pos</th></tr></thead>
+        <tbody>
+          <tr><td class="domain">mckibbenpowersportslakewales.com <span class="you">YOU</span></td><td><div class="bar"><i class="top" style="width:64%"></i><i class="bot" style="left:64%;width:16%"></i></div></td><td><span class="chip green">Most checks</span></td><td style="text-align:center" class="tabular">7</td><td style="text-align:center" class="tabular">4</td><td style="text-align:right" class="tabular">2.7</td></tr>
+          <tr><td class="domain">skypowersportslakeland.com</td><td><div class="bar"><i class="top" style="width:52%"></i><i class="bot" style="left:52%;width:8%"></i></div></td><td><span class="chip amber">Intermittent</span></td><td style="text-align:center" class="tabular">6</td><td style="text-align:center" class="tabular">1</td><td style="text-align:right" class="tabular">1.7</td></tr>
+          <tr><td class="domain">brp.com</td><td><div class="bar"><i class="top" style="width:50%"></i></div></td><td><span class="chip amber">Intermittent</span></td><td style="text-align:center" class="tabular">5</td><td style="text-align:center" class="tabular">0</td><td style="text-align:right" class="tabular">1.4</td></tr>
+          <tr><td class="domain">mykissimmeemotorsports.com</td><td><div class="bar"><i class="top" style="width:34%"></i><i class="bot" style="left:34%;width:16%"></i></div></td><td><span class="chip amber">Intermittent</span></td><td style="text-align:center" class="tabular">4</td><td style="text-align:center" class="tabular">2</td><td style="text-align:right" class="tabular">3.5</td></tr>
+          <tr><td class="domain">polaris.com</td><td><div class="bar"><i class="top" style="width:22%"></i><i class="bot" style="left:22%;width:8%"></i></div></td><td><span class="chip">Intermittent</span></td><td style="text-align:center" class="tabular">2</td><td style="text-align:center" class="tabular">1</td><td style="text-align:right" class="tabular">4.0</td></tr>
+          <tr><td class="domain">mckibbenpowersportssebring.com <span class="you">YOU</span></td><td><div class="bar"><i class="top" style="width:10%"></i></div></td><td><span class="chip">Rare</span></td><td style="text-align:center" class="tabular">1</td><td style="text-align:center" class="tabular">0</td><td style="text-align:right" class="tabular">1.0</td></tr>
+          <tr><td class="domain">gableswc.com</td><td><div class="bar"><i class="bot" style="width:10%"></i></div></td><td><span class="chip">Rare</span></td><td style="text-align:center" class="tabular">0</td><td style="text-align:center" class="tabular">1</td><td style="text-align:right" class="tabular">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout" style="margin-top:14px"><b>Note:</b> "unknown" rows (Google not resolving the display domain) and PMax / Shopping presence are tagged separately so they never get miscounted as "not bidding".</div>
+  </div>
+
+  <!-- ---- MAP TAB ---- -->
+  <div class="ctab hidden" data-pane="map">
+    <div class="section-t">Coverage map — where each rival targets</div>
+    <div class="section-d">The atlas view. Ring size = how many terms an advertiser wins in that area; color = who. Toggle a competitor to see their targeting radius vs yours.</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <span class="chip blue">● You (Mckibben)</span>
+      <span class="chip">● Sky Powersports</span>
+      <span class="chip">● My Kissimmee</span>
+      <span class="chip ghost">+ toggle rivals</span>
+    </div>
+    <div class="mapwrap">
+      <!-- schematic pins -->
+      <div class="pin" style="left:46%;top:52%"><div class="ring" style="--r:64px;border-color:var(--blue);background:rgba(42,120,214,.10)"><span class="cd" style="background:var(--blue)"></span></div><div class="lbl">Bartow (HQ) · you 80%</div></div>
+      <div class="pin" style="left:31%;top:33%"><div class="ring" style="--r:46px;border-color:var(--amber);background:rgba(237,161,0,.10)"><span class="cd" style="background:var(--amber)"></span></div><div class="lbl">Lakeland · Sky 100%</div></div>
+      <div class="pin" style="left:63%;top:30%"><div class="ring" style="--r:34px;border-color:var(--blue);background:rgba(42,120,214,.08)"><span class="cd" style="background:var(--blue)"></span></div><div class="lbl">Lake Wales · you 60%</div></div>
+      <div class="pin" style="left:72%;top:58%"><div class="ring" style="--r:30px;border-color:var(--critical);background:rgba(208,59,59,.08)"><span class="cd" style="background:var(--critical)"></span></div><div class="lbl">Dundee · gap</div></div>
+      <div class="pin" style="left:40%;top:74%"><div class="ring" style="--r:28px;border-color:var(--critical);background:rgba(208,59,59,.08)"><span class="cd" style="background:var(--critical)"></span></div><div class="lbl">Frostproof · gap</div></div>
+      <div class="pin" style="left:58%;top:80%"><div class="ring" style="--r:32px;border-color:var(--blue);background:rgba(42,120,214,.08)"><span class="cd" style="background:var(--blue)"></span></div><div class="lbl">Sebring · you 40%</div></div>
+    </div>
+    <div class="callout" style="margin-top:12px">Prototype note: this is a schematic stand-in. In the build it's a real map (spoke-and-ring grid snapped to populated places), which is the product's hero visual.</div>
+  </div>
+
+</div>
+
+<!-- ============================ RESULT DETAIL ============================ -->
+<div id="view-result" class="wrap hidden">
+  <div class="crumbs"><a onclick="show('clients')">Clients</a><span class="sep">/</span><a onclick="openClient();clientTab('clusters')">Mckibben</a><span class="sep">/</span><span>Dealer intent</span><span class="sep">/</span><span>polaris dealer</span></div>
+
+  <div class="pagehead">
+    <div>
+      <h1 class="page">polaris dealer</h1>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <span class="chip blue">Dealer intent</span>
+        <span class="chip">Bartow, FL</span>
+        <span class="chip">every 6 hours</span>
+        <span class="chip">Desktop</span>
+        <span class="chip green"><span class="dot" style="background:var(--good)"></span>Running</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn">Stop</button>
+      <button class="btn dark">Check now</button>
+    </div>
+  </div>
+
+  <div class="chip green" style="margin-top:14px">✓ Location confirmed — local results came back from FL, the right market for this term.</div>
+
+  <!-- result tabs -->
+  <div class="tabs">
+    <div class="tab active" data-rtab="snap" onclick="resultTab('snap')">Snapshot</div>
+    <div class="tab" data-rtab="who" onclick="resultTab('who')">Who appeared, check by check</div>
+    <div class="tab" data-rtab="often" onclick="resultTab('often')">How often each shows</div>
+    <div class="tab" data-rtab="log" onclick="resultTab('log')">Check log <span class="badge">10</span></div>
+  </div>
+
+  <!-- SNAPSHOT -->
+  <div class="rtab" data-rpane="snap">
+    <div class="stat-row" style="margin-bottom:20px">
+      <div class="stat"><div class="k">Advertisers seen</div><div class="v">8</div><div class="foot">this 7-day window</div></div>
+      <div class="stat"><div class="k">Always present</div><div class="v green">0</div><div class="foot">none show 100% of checks</div></div>
+      <div class="stat"><div class="k">Cycling in &amp; out</div><div class="v amber">8</div><div class="foot">budget-capped or dayparting</div></div>
+      <div class="stat"><div class="k">Checks in window</div><div class="v">10</div><div class="foot">next in 23m · stops in 59d</div></div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="card adcard">
+        <div class="h"><b>Top of the page</b><span class="chip blue">4 ads · latest check</span></div>
+        <div class="adrow"><span class="rank">1</span><div><div class="dom">skypowersportslakeland.com</div><div class="desc">Lakeland Polaris® Dealer</div></div></div>
+        <div class="adrow"><span class="rank">2</span><div><div class="dom">brp.com</div><div class="desc">Can-Am Off-Road</div></div></div>
+        <div class="adrow"><span class="rank">3</span><div><div class="dom">mckibbenpowersportslakewales.com <span class="you">YOU</span></div><div class="desc">Polaris In Lake Wales</div></div></div>
+        <div class="adrow"><span class="rank">4</span><div><div class="dom">mykissimmeemotorsports.com</div><div class="desc">Polaris Powersports Vehicles For Sale in Kissimmee, FL</div></div></div>
+      </div>
+      <div class="card adcard">
+        <div class="h"><b>Bottom of the page</b><span class="chip amber">2 ads · latest check</span></div>
+        <div class="adrow"><span class="rank">1</span><div><div class="dom" style="color:var(--muted)">unknown</div><div class="desc">Sponsored vehicles · display domain not resolved</div></div></div>
+        <div class="adrow"><span class="rank">2</span><div><div class="dom">gableswc.com</div><div class="desc">Wesley Chapel Polaris® Dealer</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHO -->
+  <div class="rtab hidden" data-rpane="who">
+    <div class="card pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div><div class="section-t">Who appeared, check by check</div><div class="section-d" style="margin:0">Each column is one check over the last 7 days.</div></div>
+        <div class="legend"><span><span class="cell top" style="display:inline-block;width:16px;height:12px;vertical-align:middle"></span> top</span><span><span class="cell bot" style="display:inline-block;width:16px;height:12px;vertical-align:middle"></span> bottom</span><span><span class="cell" style="display:inline-block;width:16px;height:12px;vertical-align:middle"></span> absent</span></div>
+      </div>
+      <div class="heat" id="heat"></div>
+    </div>
+  </div>
+
+  <!-- OFTEN -->
+  <div class="rtab hidden" data-rpane="often">
+    <div class="card pad">
+      <div class="section-t">How often each advertiser shows</div>
+      <div class="section-d">10 checks in this period. Coverage is the share where the advertiser was present. Anything under 75% is coming and going — usually a daily budget running dry.</div>
+      <table class="lb">
+        <thead><tr><th>Advertiser</th><th style="width:180px">Coverage</th><th>Consistency</th><th style="text-align:center">Top</th><th style="text-align:center">Bottom</th><th style="text-align:right">Avg pos</th></tr></thead>
+        <tbody>
+          <tr><td class="domain">mckibbenpowersportslakewales.com <span class="you">YOU</span></td><td><div class="bar"><i class="top" style="width:64%"></i><i class="bot" style="left:64%;width:16%"></i></div></td><td><span class="chip green">Most checks · 80%</span></td><td style="text-align:center" class="tabular">7</td><td style="text-align:center" class="tabular">4</td><td style="text-align:right" class="tabular">2.7</td></tr>
+          <tr><td class="domain">skypowersportslakeland.com</td><td><div class="bar"><i class="top" style="width:52%"></i><i class="bot" style="left:52%;width:8%"></i></div></td><td><span class="chip amber">Intermittent · 60%</span></td><td style="text-align:center" class="tabular">6</td><td style="text-align:center" class="tabular">1</td><td style="text-align:right" class="tabular">1.7</td></tr>
+          <tr><td class="domain">brp.com</td><td><div class="bar"><i class="top" style="width:50%"></i></div></td><td><span class="chip amber">Intermittent · 50%</span></td><td style="text-align:center" class="tabular">5</td><td style="text-align:center" class="tabular">0</td><td style="text-align:right" class="tabular">1.4</td></tr>
+          <tr><td class="domain">mykissimmeemotorsports.com</td><td><div class="bar"><i class="top" style="width:34%"></i><i class="bot" style="left:34%;width:16%"></i></div></td><td><span class="chip amber">Intermittent · 50%</span></td><td style="text-align:center" class="tabular">4</td><td style="text-align:center" class="tabular">2</td><td style="text-align:right" class="tabular">3.5</td></tr>
+          <tr><td class="domain">polaris.com</td><td><div class="bar"><i class="top" style="width:22%"></i><i class="bot" style="left:22%;width:8%"></i></div></td><td><span class="chip">Intermittent · 30%</span></td><td style="text-align:center" class="tabular">2</td><td style="text-align:center" class="tabular">1</td><td style="text-align:right" class="tabular">4.0</td></tr>
+          <tr><td class="domain" style="color:var(--muted)">unknown</td><td><div class="bar"><i class="bot" style="width:30%"></i></div></td><td><span class="chip">Intermittent · 30%</span></td><td style="text-align:center" class="tabular">1</td><td style="text-align:center" class="tabular">2</td><td style="text-align:right" class="tabular">1.0</td></tr>
+          <tr><td class="domain">mckibbenpowersportssebring.com <span class="you">YOU</span></td><td><div class="bar"><i class="top" style="width:10%"></i></div></td><td><span class="chip">Rare · 10%</span></td><td style="text-align:center" class="tabular">1</td><td style="text-align:center" class="tabular">0</td><td style="text-align:right" class="tabular">1.0</td></tr>
+          <tr><td class="domain">gableswc.com</td><td><div class="bar"><i class="bot" style="width:10%"></i></div></td><td><span class="chip">Rare · 10%</span></td><td style="text-align:center" class="tabular">0</td><td style="text-align:center" class="tabular">1</td><td style="text-align:right" class="tabular">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="rtab hidden" data-rpane="log">
+    <div class="card pad">
+      <div class="section-t">Every check we ran</div>
+      <div class="section-d">Raw record of each scan. Click "raw" to see the exact SERP that was captured.</div>
+      <table class="lb">
+        <thead><tr><th>Time</th><th>Result</th><th style="text-align:center">Top</th><th style="text-align:center">Bottom</th><th style="text-align:right"></th></tr></thead>
+        <tbody id="logbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ ADD KEYWORDS ============================ -->
+<div id="view-add" class="wrap hidden">
+  <div class="crumbs"><a onclick="show('agencies')">Agencies</a><span class="sep">/</span><a onclick="openClient()">Mckibben Powersports</a><span class="sep">/</span><span>Add keywords</span></div>
+  <h1 class="page">Add keywords</h1>
+  <div class="sub">Pick from your library or add your own, choose where to track them — Adrecon checks every keyword in every location for you.</div>
+
+  <div class="card pad" style="margin:16px 0 22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:linear-gradient(90deg,#eef4fd,#fbfcfe);border-color:#d8e4f7">
+    <span style="font-size:20px">🔍</span>
+    <b style="white-space:nowrap">One-Click Spy</b>
+    <input class="input" style="flex:1;min-width:220px" placeholder="…or paste a business name / website and we auto-build all of this for you">
+    <button class="btn primary">Spy &amp; auto-fill</button>
+  </div>
+
+  <div class="grid" style="grid-template-columns:1fr 340px;align-items:start;gap:20px">
+    <!-- LEFT: the builder -->
+    <div style="display:flex;flex-direction:column;gap:18px">
+
+      <div class="card pad">
+        <div class="step-h"><span class="step-n">1</span><div><div class="section-t">Choose keywords</div><div class="section-d" style="margin:0">From your saved library, or type your own.</div></div></div>
+        <div class="seg">
+          <button class="seg-btn active" id="segLib" onclick="kwMode('lib')">📚 From library</button>
+          <button class="seg-btn" id="segOwn" onclick="kwMode('own')">✏️ Add your own</button>
+        </div>
+        <div id="kwLib">
+          <div class="lib-clusters" id="libClusters"></div>
+          <div id="libList"></div>
+        </div>
+        <div id="kwOwn" class="hidden">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div class="field" style="flex:1;min-width:200px;margin:0"><label>Your keyword</label><input class="input" id="ownTerm" placeholder="e.g. polaris snowmobile dealer" onkeydown="if(event.key==='Enter'){addOwn();event.preventDefault()}"></div>
+            <div class="field" style="min-width:160px;margin:0"><label>Put it in a cluster</label><select class="input" id="ownCluster"><option>Dealer intent</option><option>Purchase intent</option><option>Service</option><option>Financing</option><option>+ New cluster…</option><option>No cluster</option></select></div>
+            <button class="btn dark" onclick="addOwn()">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div class="section-t">Selected keywords <span class="badge" id="kwCount">0</span></div><a onclick="clearKw()" style="font-size:12px">Clear all</a></div>
+        <div id="selKw" class="chipwrap" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card pad">
+        <div class="step-h"><span class="step-n">2</span><div><div class="section-t">Where to track</div><div class="section-d" style="margin:0">The same keywords are checked in each location you add.</div></div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div class="field" style="flex:1;min-width:220px;margin:0"><label>Add a location</label><input class="input" id="locInput" placeholder="City, county or ZIP — e.g. Bartow, FL" onkeydown="if(event.key==='Enter'){addLoc();event.preventDefault()}"></div>
+          <button class="btn" onclick="addLoc()">Add</button>
+          <button class="btn" onclick="addNearby()">📍 Add 4 nearby towns</button>
+        </div>
+        <div id="selLoc" class="chipwrap" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card pad">
+        <div class="step-h"><span class="step-n">3</span><div><div class="section-t">How often</div><div class="section-d" style="margin:0">Only the frequencies your plan allows are shown.</div></div></div>
+        <div class="row3">
+          <div class="field" style="margin:0"><label>Check every</label><select class="input" id="freqSel" onchange="renderPreview()"><option value="3">3 hours</option><option value="6" selected>6 hours</option><option value="24">Daily</option><option value="168">Weekly</option></select></div>
+          <div class="field" style="margin:0"><label>Device</label><select class="input"><option>Desktop</option><option>Mobile</option></select></div>
+          <div class="field" style="margin:0"><label>Engine</label><select class="input"><option>Google</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: sticky summary -->
+    <div class="card pad" style="position:sticky;top:76px">
+      <div class="section-t">You're about to add</div>
+      <div class="sum-big" id="sumChecks">0</div>
+      <div class="sum-eq" id="sumEq">checks per run — pick keywords &amp; locations</div>
+      <div class="sum-rows">
+        <div><span>Keywords</span><b id="sumKw">0</b></div>
+        <div><span>Locations</span><b id="sumLoc">0</b></div>
+        <div><span>Frequency</span><b id="sumFreq">6 hours</b></div>
+        <div><span>Searches / month</span><b id="sumMo" class="tabular">0</b></div>
+        <div><span>Est. cost / month</span><b id="sumCost" class="tabular">$0.00</b></div>
+      </div>
+      <div class="usage-note" id="sumFit" style="margin-top:14px">Pick some keywords and locations to see the cost.</div>
+      <button class="btn primary" style="width:100%;justify-content:center;margin-top:14px;padding:11px" onclick="document.getElementById('addedMsg').style.display='block'">Add to tracking</button>
+      <div id="addedMsg" style="display:none;font-size:12.5px;color:var(--good-ink);font-weight:600;text-align:center;margin-top:10px">✓ Added (demo) — they'd appear under Clusters &amp; terms.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px">💲 Cost is shown to agency owners only — single-site logins see usage, not dollars.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">New keywords start on the <b>Intensive</b> cadence, auto-step to weekly at day 60, and pause at day 90 unless renewed.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- agencies data ----------
+const AG = {
+  wheeler:  {name:'Wheeler Auto Group',        accounts:50, running:47, used:6240, quota:12000, proj:11400},
+  rcs:      {name:'RCS — Red Castle Services',  accounts:20, running:18, used:1180, quota:4000,  proj:3200},
+  novak:    {name:'Novak Motors',              accounts:1,  running:1,  used:1240, quota:5000,  proj:3900}
+};
+let CUR = 'wheeler';
+
+// ---------- context meter ----------
+function setCtx(name, used, quota, proj){
+  document.getElementById('ctxName').textContent = name;
+  const meter = document.getElementById('meter');
+  if(used==null){ meter.classList.add('hidden'); return; }
+  meter.classList.remove('hidden');
+  const pct = Math.min(100, Math.round(used/quota*100));
+  const fill = document.getElementById('meterFill');
+  fill.style.width = pct+'%';
+  fill.style.background = proj>quota ? 'var(--critical)' : (proj>quota*0.85 ? 'var(--warn)' : 'var(--blue)');
+  document.getElementById('meterTxt').innerHTML =
+    `<b>${used.toLocaleString()}</b> / ${quota.toLocaleString()} &nbsp;·&nbsp; projected <b>${proj.toLocaleString()}</b>/mo`;
+}
+
+// ---------- view switching ----------
+function show(v){
+  document.querySelectorAll('[id^="view-"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('view-'+v).classList.remove('hidden');
+  if(v==='agencies') setCtx('All agencies', null);
+  window.scrollTo(0,0);
+}
+function openAgency(key){
+  CUR = key; const a = AG[key];
+  setCtx(a.name, a.used, a.quota, a.proj);
+  if(a.accounts===1){ openClient(a.name); return; }   // solo owner → straight to the account
+  document.getElementById('agCrumb').textContent = a.name;
+  document.getElementById('agTitle').textContent = a.name;
+  document.getElementById('agSub').textContent = `${a.accounts} accounts · ${a.running} running · agency plan ${a.quota.toLocaleString()} searches/mo`;
+  document.getElementById('agUsed').textContent = a.used.toLocaleString();
+  document.getElementById('agUsedFoot').textContent = `of ${a.quota.toLocaleString()} searches this month`;
+  document.getElementById('agProj').textContent = a.proj.toLocaleString();
+  renderClients();
+  show('clients');
+}
+function openClient(name){
+  if(typeof name==='string'){
+    document.getElementById('clientTitle').textContent = name;
+    const ag = AG[CUR];
+    document.getElementById('clientCrumb').innerHTML =
+      `<a onclick="show('agencies')">Agencies</a><span class="sep">/</span>`+
+      `<a onclick="openAgency('${CUR}')">${ag.name}</a><span class="sep">/</span><span>${name}</span>`;
+  }
+  show('client'); clientTab('overview');
+}
+function openResult(){ event&&event.stopPropagation&&event.stopPropagation(); show('result'); resultTab('snap'); }
+
+// ---------- scalable client table ----------
+const FIRST=['Wheeler','A&L','Sunrise','Coastal','Metro','Valley','Summit','Lakeside','Bayfront','Northgate','Riverside','Prime','Elite','Grand','Horizon','Apex','Gulf','Pioneer','Heritage','Cardinal','Liberty','Maple','Crossroads','Foothill','Silver'];
+const KIND=['RV','Powersports','Marine','Auto','Motorsports','Trailers','Outdoors','Cycle','Yamaha','Honda'];
+function seedClients(){
+  const out=[]; let s=7;
+  const rnd=(n)=>{ s=(s*1103515245+12345)&0x7fffffff; return s%n; };
+  const names=new Set();
+  for(let i=0;i<48;i++){
+    let nm; do{ nm=`${FIRST[rnd(FIRST.length)]} ${KIND[rnd(KIND.length)]}`; }while(names.has(nm)); names.add(nm);
+    const running = rnd(10)>0;
+    out.push({
+      name: nm,
+      url: nm.toLowerCase().replace(/[^a-z]/g,'')+'.com',
+      status: running?'running':'paused',
+      show: running? 20+rnd(70) : null,
+      comp: running? 2+rnd(11) : 0,
+      sched: running? 400+rnd(900) : 0,
+      done: running? 20+rnd(700) : 0,
+      checked: running? ['2h ago','5h ago','1d ago','3h ago','8h ago'][rnd(5)] : 'never'
+    });
+  }
+  // pin the two real accounts at the top of Wheeler
+  out.unshift({name:'A&L RV',url:'alrvsales.com',status:'paused',show:null,comp:0,sched:0,done:0,checked:'never'});
+  out.unshift({name:'Mckibben Powersports',url:'mckibbenpowersports.com',status:'running',show:58,comp:7,sched:6360,done:548,checked:'5h ago',real:true});
+  return out;
+}
+let CLIENTS=seedClients(), sortKey='name', sortDir=1;
+function renderClients(){
+  const q=(document.getElementById('clientSearch').value||'').toLowerCase();
+  const sf=document.getElementById('statusFilter').value;
+  let rows=CLIENTS.filter(c=>(!q||c.name.toLowerCase().includes(q)||c.url.includes(q)) && (!sf|| (sf==='running'?c.status==='running':c.status!=='running')));
+  rows.sort((a,b)=>{ let x=a[sortKey],y=b[sortKey]; if(x==null)x=-1; if(y==null)y=-1; return (x>y?1:x<y?-1:0)*sortDir; });
+  document.getElementById('clientCount').textContent=`${rows.length} account${rows.length!==1?'s':''}`;
+  document.getElementById('clientRows').innerHTML = rows.map(c=>{
+    const pct = c.sched? Math.min(100,Math.round(c.done/c.sched*100)):0;
+    const cls = c.done>c.sched? 'over' : (c.done>c.sched*0.85?'warn':'');
+    const st = c.status==='running'
+      ? `<span class="st-dot"><span class="dot" style="background:var(--good)"></span>running</span>`
+      : `<span class="st-dot"><span class="dot" style="background:#c7c9cd"></span>paused</span>`;
+    return `<tr onclick="openClient('${c.name.replace(/'/g,"")}')">
+      <td><div class="cname">${c.name}</div><div class="curl">${c.url}</div></td>
+      <td>${st}</td>
+      <td class="tabular">${c.show==null?'<span style="color:var(--muted)">—</span>':c.show+'%'}</td>
+      <td style="text-align:center" class="tabular">${c.comp||'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="tabular">${c.sched?c.sched.toLocaleString():'—'}</td>
+      <td>${c.sched?`<span class="usebar"><i class="${cls}" style="width:${pct}%"></i></span><span class="tabular">${c.done.toLocaleString()}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+      <td style="color:var(--ink-2)">${c.checked}</td>
+    </tr>`;
+  }).join('');
+}
+function filterClients(){ renderClients(); }
+function sortClients(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k;sortDir=1;} renderClients(); }
+
+// ---------- client tabs ----------
+function clientTab(t){
+  document.querySelectorAll('#view-client .tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+  document.querySelectorAll('#view-client .ctab').forEach(x=>x.classList.toggle('hidden',x.dataset.pane!==t));
+}
+function toggleCluster(el){ el.closest('.cluster').classList.toggle('open'); }
+
+// ---------- result tabs ----------
+function resultTab(t){
+  document.querySelectorAll('#view-result .tab').forEach(x=>x.classList.toggle('active',x.dataset.rtab===t));
+  document.querySelectorAll('#view-result .rtab').forEach(x=>x.classList.toggle('hidden',x.dataset.rpane!==t));
+}
+
+// ---------- add-keywords cluster pick ----------
+function pickCluster(el){
+  document.querySelectorAll('#cpick .cpick').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('newClusterField').classList.toggle('hidden', el.dataset.c!=='new');
+}
+
+// ---------- build heatmap ----------
+const times=['08:30','08:45','09:35','10:35','11:35','12:50','14:40','18:35','00:35','06:20'];
+// t=top, b=bottom, '' = absent  — mirrors the screenshot pattern
+const heatRows=[
+  ['mckibbenpowersportslakewales.com',['t','b','b','t','','','b','t','t','t'],'80%'],
+  ['skypowersportslakeland.com',       ['t','b','t','','','t','','','t','t'],'60%'],
+  ['brp.com',                          ['','','t','','','t','','t','t','t'],'50%'],
+  ['mykissimmeemotorsports.com',       ['','b','','t','','t','','b','t','t'],'50%'],
+  ['polaris.com',                      ['t','','b','','','','','t','',''],'30%'],
+  ['unknown',                          ['','','','t','b','','','b','','b'],'30%'],
+  ['mckibbenpowersportssebring.com',   ['t','','','','','','','','',''],'10%'],
+  ['gableswc.com',                     ['','','','','','','','','','b'],'10%']
+];
+(function(){
+  let h='<table><tr><td></td>'+times.map(t=>`<td class="time">${t}</td>`).join('')+'<td class="time">cov</td></tr>';
+  heatRows.forEach(r=>{
+    h+='<tr><td class="adv">'+r[0]+'</td>'+r[1].map(c=>`<td><div class="cell ${c==='t'?'top':c==='b'?'bot':''}"></div></td>`).join('')+`<td class="cov">${r[2]}</td></tr>`;
+  });
+  h+='</table>';
+  document.getElementById('heat').innerHTML=h;
+})();
+
+// ---------- build check log ----------
+const log=[
+  ['Jul 29, 06:20','Ads found',4,2],['Jul 29, 00:35','Ads found',4,0],
+  ['Jul 28, 18:35','Ads found',3,2],['Jul 28, 14:40','No ads',0,0],
+  ['Jul 28, 12:50','Ads found',4,2],['Jul 28, 11:35','No ads',0,0],
+  ['Jul 28, 10:35','Ads found',1,1],['Jul 28, 09:35','Ads found',4,2],
+  ['Jul 28, 08:45','Ads found',2,2],['Jul 28, 08:30','Ads found',4,0]
+];
+(function(){
+  document.getElementById('logbody').innerHTML=log.map(r=>{
+    const ok=r[1]==='Ads found';
+    return `<tr><td class="tabular">${r[0]}</td><td><span class="chip ${ok?'green':''}">${r[1]}</span></td><td style="text-align:center" class="tabular">${r[2]}</td><td style="text-align:center" class="tabular">${r[3]}</td><td style="text-align:right"><a>raw</a></td></tr>`;
+  }).join('');
+})();
+
+// ---------- init ----------
+setCtx('All agencies', null);
+</script>
+<script>
+const LIB = {
+  'Dealer intent': ['polaris dealer','polaris dealer near me','powersports dealer near me','polaris dealership'],
+  'Purchase intent': ['polaris for sale','polaris ranger for sale','polaris rzr for sale','used polaris for sale'],
+  'Service': ['polaris service','polaris parts near me','polaris repair'],
+  'Financing': ['polaris financing','polaris bad-credit financing'],
+};
+let selKw = [];      // {term, cluster}
+let selLoc = [];
+let activeCluster = 'Dealer intent';
+const RATE = 0.006;   // agency cost per search (super-admin set)
+
+function kwMode(m){
+  document.getElementById('segLib').classList.toggle('active', m==='lib');
+  document.getElementById('segOwn').classList.toggle('active', m==='own');
+  document.getElementById('kwLib').classList.toggle('hidden', m!=='lib');
+  document.getElementById('kwOwn').classList.toggle('hidden', m!=='own');
+}
+function renderClusters(){
+  document.getElementById('libClusters').innerHTML = Object.keys(LIB).map(c =>
+    `<div class="lib-cl ${c===activeCluster?'active':''}" onclick="activeCluster='${c}';renderClusters();renderLib()">${c} <span style="opacity:.6">${LIB[c].length}</span></div>`).join('');
+}
+function has(term){ return selKw.some(k=>k.term===term); }
+function renderLib(){
+  document.getElementById('libList').innerHTML = LIB[activeCluster].map(term => {
+    const on = has(term);
+    return `<label class="libitem"><input type="checkbox" ${on?'checked':''} onchange="toggleLib('${term.replace(/'/g,"")}','${activeCluster}')"><span>${term}</span>${on?'<span class="added">✓ added</span>':''}</label>`;
+  }).join('');
+}
+function toggleLib(term, cluster){
+  if(has(term)) selKw = selKw.filter(k=>k.term!==term);
+  else selKw.push({term, cluster});
+  renderLib(); renderSelKw();
+}
+function addOwn(){
+  const t = document.getElementById('ownTerm').value.trim();
+  if(!t) return;
+  const c = document.getElementById('ownCluster').value.replace('…','').replace('+ New cluster','New cluster');
+  if(!has(t)) selKw.push({term:t, cluster:c});
+  document.getElementById('ownTerm').value='';
+  renderSelKw();
+}
+function removeKw(i){ selKw.splice(i,1); renderSelKw(); renderLib(); }
+function clearKw(){ selKw=[]; renderSelKw(); renderLib(); }
+function renderSelKw(){
+  const el = document.getElementById('selKw');
+  document.getElementById('kwCount').textContent = selKw.length;
+  el.innerHTML = selKw.length
+    ? selKw.map((k,i)=>`<span class="kwchip">${k.term} <small>· ${k.cluster}</small> <b onclick="removeKw(${i})">×</b></span>`).join('')
+    : '<span class="muted-note">Nothing selected yet — check some from the library above, or add your own.</span>';
+  renderPreview();
+}
+const NEARBY = ['Lakeland, FL','Winter Haven, FL','Auburndale, FL','Lake Wales, FL'];
+function addLoc(){
+  const v = document.getElementById('locInput').value.trim();
+  if(v && !selLoc.includes(v)) selLoc.push(v);
+  document.getElementById('locInput').value='';
+  renderLoc();
+}
+function addNearby(){ NEARBY.forEach(n=>{ if(!selLoc.includes(n)) selLoc.push(n); }); renderLoc(); }
+function removeLoc(i){ selLoc.splice(i,1); renderLoc(); }
+function renderLoc(){
+  const el = document.getElementById('selLoc');
+  el.innerHTML = selLoc.length
+    ? selLoc.map((l,i)=>`<span class="locchip">${l} <b onclick="removeLoc(${i})">×</b></span>`).join('')
+    : '<span class="muted-note">No locations yet — add one, or drop in 4 nearby towns.</span>';
+  renderPreview();
+}
+function renderPreview(){
+  const kw = selKw.length, loc = selLoc.length, checks = kw*loc;
+  const fh = parseInt(document.getElementById('freqSel').value,10);
+  const label = {3:'3 hours',6:'6 hours',24:'Daily',168:'Weekly'}[fh];
+  const perMonth = Math.round(checks * (30*24/fh));
+  document.getElementById('sumChecks').textContent = checks.toLocaleString();
+  document.getElementById('sumEq').textContent = checks ? `${kw} keyword${kw!=1?'s':''} × ${loc} location${loc!=1?'s':''} per run` : 'checks per run — pick keywords & locations';
+  document.getElementById('sumKw').textContent = kw;
+  document.getElementById('sumLoc').textContent = loc;
+  document.getElementById('sumFreq').textContent = label;
+  document.getElementById('sumMo').textContent = perMonth.toLocaleString();
+  document.getElementById('sumCost').textContent = '$' + (perMonth*RATE).toFixed(2);
+  const fit = document.getElementById('sumFit');
+  if(!checks){ fit.textContent='Pick some keywords and locations to see the cost.'; fit.style.background=''; fit.style.color=''; fit.style.borderColor=''; return; }
+  const over = perMonth > 6000;
+  fit.innerHTML = over
+    ? `📊 <div>Adds ~${perMonth.toLocaleString()} searches/mo — <b>heavy</b>. Consider a lower frequency.</div>`
+    : `📊 <div>Adds ~${perMonth.toLocaleString()} searches/mo · fits your plan.</div>`;
+  fit.style.background = over ? 'var(--amber-soft)' : '';
+  fit.style.color = over ? '#8a6100' : '';
+}
+// seed a realistic starting state
+selKw = [{term:'polaris dealer',cluster:'Dealer intent'},{term:'polaris dealer near me',cluster:'Dealer intent'}];
+selLoc = ['Bartow, FL','Lakeland, FL','Winter Haven, FL'];
+renderClusters(); renderLib(); renderSelKw(); renderLoc();
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+# Secrets & local config
+config.php
+config.php.bak
+serp-tracker-config.php
+.env
+.env.*
+
+# Logs
+*.log
+serp-worker.log
+
+# Database dumps
+*.sql
+*.sql.gz
+*.dump
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# Temp / scratch
+_*.php
+_*.css
+*.tmp
+*.bak
+*.old
+
+# Composer / deps (if added later)
+/vendor/
+
+# Local runtime
+/data/*.cache
+/cache/
+/tmp/

@@ -1,0 +1,11 @@
+# Static assets are public, but nothing here should ever execute.
+Options -Indexes -ExecCGI
+<FilesMatch "\.(php|phtml|phar|cgi|pl)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

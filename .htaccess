@@ -1,0 +1,53 @@
+# Ads tracker, Apache configuration.
+# Works on Apache 2.4 (DirectAdmin, cPanel). See the 2.2 block below if needed.
+
+Options -Indexes
+DirectoryIndex index.php
+
+# Secrets, CLI scripts, logs and data files must never be served.
+<FilesMatch "^(config\.php|config\.example\.php|worker\.php|seed_locations\.php|.*\.log|.*\.md|.*\.sql|.*\.csv)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Dotfiles.
+<FilesMatch "^\.">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "same-origin"
+  Header always set Permissions-Policy "geolocation=(), camera=(), microphone=()"
+  # Session cookies over HTTPS only. Harmless if the site is already HTTPS only.
+  Header always edit Set-Cookie ^(.*)$ "$1; HttpOnly; SameSite=Lax"
+</IfModule>
+
+# Force HTTPS. Comment out if the site does not have a certificate yet.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+</IfModule>
+
+php_flag display_errors Off
+php_flag log_errors On
