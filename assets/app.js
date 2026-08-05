@@ -579,7 +579,7 @@ window.changeDuration = function (el) {
   });
 })();
 
-/* ---------- Agency → Client (dealer) context switcher ---------- */
+/* ---------- Flat dealer context switcher ---------- */
 (function () {
   'use strict';
   document.addEventListener('DOMContentLoaded', function () {
@@ -588,28 +588,14 @@ window.changeDuration = function (el) {
     var menu = document.getElementById('ctxMenu');
     if (!wrap || !toggle || !menu) return;
 
-    var agencyPane = document.getElementById('ctxAgencies');
-
-    function showPane(el) {
-      menu.querySelectorAll('.ctx-pane').forEach(function (p) { p.hidden = true; });
-      if (el) el.hidden = false;
-    }
-
     function openMenu() {
       menu.hidden = false;
       toggle.setAttribute('aria-expanded', 'true');
-      var onClient = menu.querySelector('.ctx-clients a.ctx-item.on');
-      if (onClient) {
-        var pane = onClient.closest('.ctx-clients');
-        if (pane) { showPane(pane); return; }
-      }
-      showPane(agencyPane);
     }
 
     function closeMenu() {
       menu.hidden = true;
       toggle.setAttribute('aria-expanded', 'false');
-      showPane(agencyPane);
     }
 
     toggle.addEventListener('click', function (e) {
@@ -621,19 +607,6 @@ window.changeDuration = function (el) {
 
     menu.addEventListener('click', function (e) {
       e.stopPropagation();
-      var back = e.target.closest('[data-back]');
-      if (back) {
-        e.preventDefault();
-        showPane(agencyPane);
-        return;
-      }
-      var agencyBtn = e.target.closest('.ctx-agency-btn');
-      if (agencyBtn) {
-        e.preventDefault();
-        var id = agencyBtn.getAttribute('data-agency');
-        var pane = document.getElementById('ctxClients-' + id);
-        if (pane) showPane(pane);
-      }
     });
 
     document.addEventListener('click', function () { closeMenu(); });
