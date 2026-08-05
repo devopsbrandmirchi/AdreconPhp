@@ -182,10 +182,22 @@ $showBuilder = $tab === 'add' || !$trackers;
 
 render_head($client['name'], $user);
 
-$crumbTrail = [
-    ['Dealers', 'clients.php'],
-    [$client['name'], $tab === 'add' ? 'client.php?id=' . $id : null],
-];
+$agencyId = (int)($client['agency_id'] ?? 0);
+$agencyHref = is_admin()
+    ? ($agencyId > 0 || ($client['agency_name'] ?? '') === ''
+        ? 'clients.php?agency=' . $agencyId
+        : 'clients.php?agency=0')
+    : 'clients.php';
+$crumbTrail = is_admin()
+    ? [
+        ['Agencies', 'index.php'],
+        [$client['agency_name'] ?: 'No agency', $agencyHref],
+        [$client['name'], $tab === 'add' ? 'client.php?id=' . $id : null],
+      ]
+    : [
+        ['My accounts', 'clients.php'],
+        [$client['name'], $tab === 'add' ? 'client.php?id=' . $id : null],
+      ];
 if ($tab === 'add') {
     $crumbTrail[] = ['Add keywords', null];
 }

@@ -158,11 +158,28 @@ $schedChip = match ($t['status']) {
 };
 ?>
 <?php
-echo crumbs([
-    ['Dealers', 'clients.php'],
-    [$parentClient['name'] ?? 'Dealer', $parentClient ? 'client.php?id=' . (int)$parentClient['id'] : null],
-    [$t['keyword'], null],
-]);
+$agencyCrumb = $parentClient['agency'] ?? 'No agency';
+$agencyIdCrumb = 0;
+if ($parentClient && !empty($parentClient['id'])) {
+    $agSt = db()->prepare('SELECT agency_id FROM clients WHERE id = ?');
+    $agSt->execute([(int)$parentClient['id']]);
+    $agencyIdCrumb = (int)$agSt->fetchColumn();
+}
+$agencyListHref = is_admin()
+    ? 'clients.php?agency=' . $agencyIdCrumb
+    : 'clients.php';
+echo crumbs(is_admin()
+    ? [
+        ['Agencies', 'index.php'],
+        [$agencyCrumb, $agencyListHref],
+        [$parentClient['name'] ?? 'Client', $parentClient ? 'client.php?id=' . (int)$parentClient['id'] : null],
+        [$t['keyword'], null],
+      ]
+    : [
+        ['My accounts', 'clients.php'],
+        [$parentClient['name'] ?? 'Client', $parentClient ? 'client.php?id=' . (int)$parentClient['id'] : null],
+        [$t['keyword'], null],
+      ]);
 ?>
 
 <div class="pagehead">

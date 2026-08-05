@@ -1,22 +1,66 @@
-ADRECON — Competitive Spy Intelligence (short-term PHP build)
-=============================================================
-Scope: AD-TRACKING only, on PHP/MySQL, moving to your own DigitalOcean droplet
-at getadrecon.com. Reputation & competitor-sentiment go into Serpulix later.
+ADRECON — What this application is for
+======================================
 
-BUILD ORDER (easy -> hard; each phase ships on its own):
-  1. UI reskin          (front-end only, biggest visual win, do first)
-  2. Frequency limits   (allowed frequencies per agency/account)
-  3. Cap + auto-pause   (pause an agency at its monthly search cap)
-  4. Cost rates         (per-agency/account, superadmin-only, hidden from single-site users)
-  5. Scan lifecycle     (auto-decay: 60d -> weekly, 90d -> pause, do LAST)
+Adrecon is a competitive Google Ads spy tool (PHP + MySQL).
 
-FILES
-  adrecon-prototype.html ...... The UI target. Rebranded Adrecon, One-Click Spy kept,
-                                Alerts removed. Includes agency Usage & limits (cap +
-                                auto-pause + allowed frequencies) and per-account
-                                limits + Scan lifecycle (Renew resets the clock).
-  UI_REBUILD_STEPS.md ......... The build order above, spelled out phase by phase, so
-                                the dev does the easy UI first and the scheduler logic last.
-  DIGITALOCEAN_MIGRATION.md ... Move the PHP/MySQL app to a DO droplet (DNS, SSL, cron, backups).
+In plain terms:
+  You pick keywords and locations (e.g. "polaris dealer" in Lakeland, FL).
+  On a schedule the app asks Google what paid ads appear for that search.
+  It stores who advertised (domain, headline, position: top/middle/bottom).
+  Over many checks you see which competitors show up often, and how consistently.
 
-DO IN THIS ORDER: migrate to droplet -> reskin UI (Phase 1) -> then Phases 2-4 -> give to Wheeler.
+Words used in the UI:
+  Agency   = the company/contract you work under
+  Client   = one business you track for (e.g. McKibben)
+  Website  = that client's domain
+  Keyword  = one search term + one location + one device (= a "tracker")
+  Check    = one look at Google (one run) — this is what costs money via SerpApi/etc.
+
+It does NOT do reputation / sentiment. That stays for Serpulix later.
+This build is ad-tracking only.
+
+---------------------------------------------------------------------
+Import remaining dump data (you already did users + trackers)
+---------------------------------------------------------------------
+
+Use folder: sql_by_table/
+
+phpMyAdmin → select DB → Import → one file at a time, in order:
+
+  1. insert_agencies.sql
+  2. insert_clients.sql
+  3. insert_locations.sql
+  4. insert_sites.sql
+  5. insert_runs_part01.sql … part45.sql   (~1.5 MB each, in order)
+  6. insert_ad_placements_part01.sql … part03.sql
+
+Details: sql_by_table/README_IMPORT.txt
+
+---------------------------------------------------------------------
+Smoke test (proves the app stack is working)
+---------------------------------------------------------------------
+
+1. Start the app (if not already):
+     php -S localhost:8000
+
+2. Run:
+     php smoke_test.php
+
+3. Read:
+     SMOKE_TEST_RESULT.txt
+
+That file records PASS/FAIL for DB connection, table reads, the
+keyword→runs→ads path, and login/CSS pages.
+
+---------------------------------------------------------------------
+Build order (product work still planned)
+---------------------------------------------------------------------
+
+  1. UI reskin          (done / in progress)
+  2. Frequency limits
+  3. Cap + auto-pause
+  4. Cost rates
+  5. Scan lifecycle
+
+Prototype UI target: adrecon-prototype.html
+Phase checklist:     UI_REBUILD_STEPS.md

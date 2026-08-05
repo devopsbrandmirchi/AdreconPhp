@@ -439,8 +439,23 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 .is-live{position:relative;padding-left:22px}
 .is-live::before{content:"";position:absolute;left:9px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--blue);animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
-.login{max-width:400px;margin:9vh auto;padding:0 24px}
-.login h1{font-size:26px;font-weight:800;letter-spacing:-.6px}
+.login{max-width:420px;margin:0 auto;padding:0 24px;width:100%}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(42,120,214,.10), transparent 55%),
+    var(--page)}
+.login-card{padding:36px 32px 32px;box-shadow:0 8px 28px rgba(11,11,11,.08), var(--shadow)}
+.login-logo{display:block;text-align:center;font-size:34px;font-weight:800;letter-spacing:-.8px;
+  color:var(--ink);margin:0 0 22px;line-height:1;text-decoration:none}
+.login-logo span{font-weight:400;color:var(--muted)}
+.login-logo:hover{text-decoration:none;color:var(--ink)}
+.login-title{margin:0 0 8px;font-size:26px;font-weight:800;letter-spacing:-.6px;text-align:center;color:var(--ink)}
+.login-sub{margin:0 0 22px;font-size:13.5px;line-height:1.45;color:var(--muted);text-align:center}
+.login-form{display:grid;gap:14px}
+.login-form .field{display:grid;gap:6px}
+.login-actions{display:flex;justify-content:center;padding-top:6px}
+.login-actions .btn.primary{min-width:160px;justify-content:center;padding:11px 22px;font-size:14px}
+.login .flash{margin-bottom:4px}
 .builder-grid{display:grid;grid-template-columns:1fr 340px;align-items:start;gap:20px}
 .builder-stack{display:flex;flex-direction:column;gap:18px}
 .builder-summary{position:sticky;top:76px}

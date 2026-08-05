@@ -2,34 +2,50 @@
 declare(strict_types=1);
 
 /**
- * Adrecon chrome — topbar + .wrap, with flat dealer switcher (no agency layer).
+ * Adrecon chrome — topbar + .wrap, with Agency → Client (dealer) switcher.
  */
-function nav_dealers(): array {
-    static $dealers = null;
-    if ($dealers !== null) {
-        return $dealers;
+function nav_client_tree(): array {
+    static $tree = null;
+    if ($tree !== null) {
+        return $tree;
     }
     [$scope, $params] = client_scope_sql('c.id');
     $stmt = db()->prepare(
-        "SELECT c.id, c.name FROM clients c WHERE $scope ORDER BY c.name"
+        "SELECT c.id, c.name, c.agency_id, a.name AS agency_name
+         FROM clients c
+         LEFT JOIN agencies a ON a.id = c.agency_id
+         WHERE $scope
+         ORDER BY COALESCE(a.name, 'zzz'), c.name"
     );
     $stmt->execute($params);
-    $dealers = [];
-    foreach ($stmt->fetchAll() as $r) {
-        $dealers[] = [
+    $rows = $stmt->fetchAll();
+
+    $tree = [];
+    foreach ($rows as $r) {
+        $aid = $r['agency_id'] !== null ? (int)$r['agency_id'] : 0;
+        $aname = $r['agency_name'] ?: 'No agency';
+        if (!isset($tree[$aid])) {
+            $tree[$aid] = ['id' => $aid, 'name' => $aname, 'clients' => []];
+        }
+        $tree[$aid]['clients'][] = [
             'id'   => (int)$r['id'],
             'name' => (string)$r['name'],
         ];
     }
-    return $dealers;
+    return $tree;
 }
 
 /** Resolve what the topbar context label should show on this request. */
 function nav_current_context(): array {
-    $script  = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
-    $dealers = nav_dealers();
+    $script = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    $tree   = nav_client_tree();
 
     $clientId = 0;
+    $agencyId = null;
+    if (isset($_GET['agency'])) {
+        $agencyId = (int)$_GET['agency'];
+    }
+
     if ($script === 'client.php') {
         $clientId = (int)($_GET['id'] ?? 0);
     } elseif ($script === 'tracker.php') {
@@ -39,27 +55,43 @@ function nav_current_context(): array {
             $st->execute([$tid]);
             $clientId = (int)$st->fetchColumn();
         }
+    } elseif ($script === 'clients.php' && isset($_GET['agency'])) {
+        $agencyId = (int)$_GET['agency'];
     }
 
     $clientName = '';
-    foreach ($dealers as $c) {
-        if ($c['id'] === $clientId) {
-            $clientName = $c['name'];
-            break;
+    $agencyName = '';
+    if ($clientId > 0) {
+        foreach ($tree as $ag) {
+            foreach ($ag['clients'] as $c) {
+                if ($c['id'] === $clientId) {
+                    $clientName = $c['name'];
+                    $agencyId = (int)$ag['id'];
+                    $agencyName = $ag['name'];
+                    break 2;
+                }
+            }
         }
+    } elseif ($agencyId !== null && isset($tree[$agencyId])) {
+        $agencyName = $tree[$agencyId]['name'];
     }
 
-    $onDealers = in_array($script, ['index.php', 'clients.php'], true) && $clientId === 0;
-    $label = $clientName !== '' ? $clientName : 'All dealers';
+    if ($clientName !== '') {
+        $label = $clientName;
+    } elseif ($agencyName !== '') {
+        $label = $agencyName;
+    } else {
+        $label = is_admin() ? 'All agencies' : 'My accounts';
+    }
 
     return [
         'label'       => $label,
         'client_id'   => $clientId,
+        'agency_id'   => $agencyId === null ? -1 : (int)$agencyId,
         'client_name' => $clientName,
-        'dealers'     => $dealers,
-        'on_dealers'  => $onDealers,
-        // Keep old key so meter visibility stays tied to the home list.
-        'on_agencies' => $onDealers,
+        'agency_name' => $agencyName,
+        'tree'        => $tree,
+        'on_agencies' => $script === 'index.php' && $agencyId === null && $clientId === 0,
     ];
 }
 
@@ -86,33 +118,66 @@ function render_head(string $title, ?array $user = null): void {
   <a class="wordmark" href="index.php">Ad<span>recon</span></a>
   <?php if ($user && $ctx): ?>
   <div class="ctx-wrap" id="ctxWrap">
-    <button type="button" class="ctx" id="ctxToggle" aria-haspopup="true" aria-expanded="false" title="Switch dealer">
+    <button type="button" class="ctx" id="ctxToggle" aria-haspopup="true" aria-expanded="false" title="Switch agency or account">
       <span class="ctx-label" id="ctxLabel"><?= h($ctx['label']) ?></span>
       <span class="caretdown">▾</span>
     </button>
     <div class="ctx-menu" id="ctxMenu" hidden>
-      <div class="ctx-pane" id="ctxDealers">
-        <a class="ctx-item<?= !empty($ctx['on_dealers']) ? ' on' : '' ?>" href="clients.php">
-          <span>All dealers</span>
+      <div class="ctx-pane" id="ctxAgencies">
+        <a class="ctx-item<?= !empty($ctx['on_agencies']) ? ' on' : '' ?>" href="<?= is_admin() ? 'index.php' : 'clients.php' ?>">
+          <span><?= is_admin() ? 'All agencies' : 'My accounts' ?></span>
         </a>
-        <?php if (!$ctx['dealers']): ?>
-          <div class="ctx-empty">No dealers yet</div>
+        <?php if (!$ctx['tree']): ?>
+          <div class="ctx-empty">No accounts yet</div>
         <?php else: ?>
-          <div class="ctx-sep">Dealers</div>
-          <?php foreach ($ctx['dealers'] as $c): ?>
-            <a class="ctx-item<?= $ctx['client_id'] === (int)$c['id'] ? ' on' : '' ?>"
-               href="client.php?id=<?= (int)$c['id'] ?>">
-              <span><?= h($c['name']) ?></span>
-            </a>
+          <?php foreach ($ctx['tree'] as $ag):
+            $solo = count($ag['clients']) === 1;
+            $agencyHref = $solo
+                ? 'client.php?id=' . (int)$ag['clients'][0]['id']
+                : 'clients.php?agency=' . (int)$ag['id'];
+          ?>
+            <?php if ($solo): ?>
+              <a class="ctx-item<?= $ctx['agency_id'] === (int)$ag['id'] ? ' on' : '' ?>" href="<?= h($agencyHref) ?>">
+                <span><?= h($ag['name']) ?></span>
+                <span class="ctx-meta">solo</span>
+              </a>
+            <?php else: ?>
+              <button type="button" class="ctx-item ctx-agency-btn<?= $ctx['agency_id'] === (int)$ag['id'] && $ctx['client_id'] === 0 ? ' on' : '' ?>"
+                      data-agency="<?= (int)$ag['id'] ?>">
+                <span><?= h($ag['name']) ?></span>
+                <span class="ctx-meta"><?= count($ag['clients']) ?> dealers ›</span>
+              </button>
+            <?php endif; ?>
           <?php endforeach; ?>
         <?php endif; ?>
       </div>
+
+      <?php foreach ($ctx['tree'] as $ag):
+        if (count($ag['clients']) <= 1) continue;
+      ?>
+      <div class="ctx-pane ctx-clients" id="ctxClients-<?= (int)$ag['id'] ?>" hidden data-agency-pane="<?= (int)$ag['id'] ?>">
+        <button type="button" class="ctx-item ctx-back" data-back="1">
+          <span>‹ Agencies</span>
+        </button>
+        <a class="ctx-item ctx-agency-all<?= $ctx['agency_id'] === (int)$ag['id'] && $ctx['client_id'] === 0 ? ' on' : '' ?>"
+           href="clients.php?agency=<?= (int)$ag['id'] ?>">
+          <span>All in <?= h($ag['name']) ?></span>
+        </a>
+        <div class="ctx-sep">Dealers</div>
+        <?php foreach ($ag['clients'] as $c): ?>
+          <a class="ctx-item<?= $ctx['client_id'] === (int)$c['id'] ? ' on' : '' ?>"
+             href="client.php?id=<?= (int)$c['id'] ?>">
+            <span><?= h($c['name']) ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+      <?php endforeach; ?>
     </div>
   </div>
   <?php if (is_admin()): ?>
   <nav class="topnav">
     <a class="<?= $here === 'users.php' ? 'on' : '' ?>" href="users.php">Accounts</a>
-    <a class="<?= $here === 'admin.php' ? 'on' : '' ?>" href="admin.php">Dealer access</a>
+    <a class="<?= $here === 'admin.php' ? 'on' : '' ?>" href="admin.php">Client access</a>
     <a class="<?= $here === 'cron_setup.php' ? 'on' : '' ?>" href="cron_setup.php">Server</a>
   </nav>
   <?php endif; ?>

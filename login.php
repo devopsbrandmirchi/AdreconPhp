@@ -72,21 +72,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sign in · Adrecon</title>
 <link rel="stylesheet" href="assets/app.css"></head>
-<body><div class="login">
-<a class="wordmark" href="login.php" style="display:inline-block;margin-bottom:18px;color:var(--ink)">Ad<span style="color:var(--muted)">recon</span></a>
-<h1 class="page" style="font-size:26px">Sign in</h1>
-<p class="sub" style="margin-bottom:16px">Competitive spy intelligence — see who is advertising on your keywords, and how often.</p>
+<body class="login-page">
+<div class="login">
+  <div class="login-card card">
+    <a class="login-logo wordmark" href="login.php">Ad<span>recon</span></a>
+    <h1 class="login-title">Sign in</h1>
+    <p class="login-sub">Competitive spy intelligence — see who is advertising on your keywords, and how often.</p>
 
-<?php if ($error): ?><div class="flash flash-err"><?= h($error) ?></div><?php endif; ?>
+    <?php if ($error): ?><div class="flash flash-err"><?= h($error) ?></div><?php endif; ?>
 
-<div class="card pad">
-<form method="post" class="grid">
-  <?= csrf_field() ?>
-  <div class="field"><label for="username">Username</label>
-    <input class="input" type="text" id="username" name="username" required autofocus autocomplete="username"></div>
-  <div class="field"><label for="password">Password</label>
-    <input class="input" type="password" id="password" name="password" required autocomplete="current-password"></div>
-  <div><button class="btn primary" type="submit">Sign in</button></div>
-</form>
+    <form method="post" class="login-form">
+      <?= csrf_field() ?>
+      <div class="field">
+        <label for="username">Username</label>
+        <input class="input" type="text" id="username" name="username" required autofocus autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input class="input" type="password" id="password" name="password" required autocomplete="current-password">
+      </div>
+      <div class="login-actions">
+        <button class="btn primary" type="submit"<?= $locked ? ' disabled' : '' ?>>Sign in</button>
+      </div>
+    </form>
+  </div>
 </div>
-</div></body></html>
+</body></html>

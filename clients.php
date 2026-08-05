@@ -8,14 +8,29 @@ $user = require_login();
 reap_stale_runs();
 expire_finished_trackers();
 
-// Flat dealer list — agency URLs redirect here (no agency layer in the UI).
-if (isset($_GET['agency'])) {
-    redirect('clients.php');
-}
-
 [$scope, $scopeParams] = client_scope_sql('c.id');
 
-$sql = "SELECT c.*,
+$agencyFilter = isset($_GET['agency']) ? (int)$_GET['agency'] : -1;
+$agencyName = '';
+if ($agencyFilter > 0) {
+    $scope = "($scope) AND c.agency_id = ?";
+    $scopeParams[] = $agencyFilter;
+    $an = db()->prepare('SELECT name FROM agencies WHERE id = ?');
+    $an->execute([$agencyFilter]);
+    $agencyName = (string)($an->fetchColumn() ?: '');
+    if ($agencyName === '' || !can_see_agency($agencyFilter)) {
+        http_response_code(404);
+        exit('That agency does not exist or you cannot see it.');
+    }
+} elseif ($agencyFilter === 0 && isset($_GET['agency'])) {
+    $scope = "($scope) AND c.agency_id IS NULL";
+    $agencyName = 'No agency';
+} elseif (is_admin() && $agencyFilter < 0) {
+    // Admins land on the agencies board; this page needs an agency.
+    redirect('index.php');
+}
+
+$sql = "SELECT c.*, a.name AS agency_name,
           (SELECT COUNT(*) FROM trackers t WHERE t.client_id = c.id) AS schedules,
           (SELECT COUNT(*) FROM trackers t WHERE t.client_id = c.id AND t.status = 'active') AS running,
           (SELECT COUNT(DISTINCT t.keyword) FROM trackers t WHERE t.client_id = c.id) AS keywords,
@@ -23,11 +38,17 @@ $sql = "SELECT c.*,
           (SELECT COUNT(*) FROM sites st WHERE st.client_id = c.id) AS sites,
           (SELECT MAX(t.last_run_at) FROM trackers t WHERE t.client_id = c.id) AS last_run
         FROM clients c
+        LEFT JOIN agencies a ON a.id = c.agency_id
         WHERE $scope
         ORDER BY c.name";
 $stmt = db()->prepare($sql);
 $stmt->execute($scopeParams);
 $clients = $stmt->fetchAll();
+
+// Solo owner shortcut: one account under this agency → open it.
+if (count($clients) === 1 && $agencyFilter >= 0) {
+    redirect('client.php?id=' . (int)$clients[0]['id']);
+}
 
 $totalSchedules = array_sum(array_column($clients, 'schedules'));
 $totalRunning   = array_sum(array_column($clients, 'running'));
@@ -54,14 +75,19 @@ $addHref = $firstClientId
     ? 'client.php?id=' . $firstClientId . '&tab=add'
     : (is_admin() ? 'admin.php' : 'clients.php');
 
-render_head('Dealers', $user);
+$title = $agencyName !== '' ? $agencyName : 'Clients';
+render_head($title, $user);
+
+$crumbs = is_admin()
+    ? [['Agencies', 'index.php'], [$agencyName !== '' ? $agencyName : 'Dealers', null]]
+    : [['My dealers', null]];
 ?>
 
-<?= crumbs([['Dealers', null]]) ?>
+<?= crumbs($crumbs) ?>
 
 <div class="pagehead" style="margin-bottom:18px">
   <div>
-    <h1 class="page">Dealers</h1>
+    <h1 class="page"><?= h($title) ?></h1>
     <div class="sub"><?= count($clients) ?> dealer<?= count($clients) === 1 ? '' : 's' ?> ·
       <?= $totalSchedules ?> keyword<?= $totalSchedules === 1 ? '' : 's' ?> tracked ·
       <?= $totalRunning ?> running now</div>
@@ -80,7 +106,7 @@ render_head('Dealers', $user);
   <div class="card pad">
     <p style="margin:0;color:var(--ink-2)">
       <?= is_admin()
-          ? 'No dealers yet. Add one under Client access.'
+          ? 'No dealers in this agency yet. Add one under Client access.'
           : 'No dealers have been shared with you yet.' ?>
     </p>
   </div>

@@ -1,0 +1,35 @@
+Adrecon smoke test
+Generated: 2026-08-05T04:37:43+00:00
+
+What this app is for
+  Adrecon watches Google paid ads for chosen keywords + locations on a schedule.
+  You see which competitor domains show up in ad slots over time (competitive spy).
+
+Row counts (from config.php DB):
+  users: 1
+  trackers: 12
+  agencies: 1
+  clients: 1
+  locations: 3418
+  sites: 0
+  runs: 0
+  ad_placements: 0
+
+Checks:
+  [PASS] Database connection — root@localhost / adrecon
+  [PASS] Table `users` readable — 1 rows
+  [PASS] Table `trackers` readable — 12 rows
+  [PASS] Table `agencies` readable — 1 rows
+  [PASS] Table `clients` readable — 1 rows
+  [PASS] Table `locations` readable — 3418 rows
+  [PASS] Table `sites` readable — 0 rows
+  [PASS] Table `runs` readable — 0 rows
+  [PASS] Table `ad_placements` readable — 0 rows
+  [PASS] Spy path: keyword → runs → ads — no run history yet (import insert_runs.sql + insert_ad_placements.sql to fill history)
+  [PASS] Local web server — http://localhost:8000
+  [PASS] login.php loads — HTTP 200
+  [PASS] assets/app.css loads — HTTP 200, 32486 bytes
+  [PASS] index.php protected — HTTP 302
+
+RESULT: ALL CHECKS PASSED (14 passed)
+
