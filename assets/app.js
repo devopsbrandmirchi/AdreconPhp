@@ -502,19 +502,131 @@ window.changeDuration = function (el) {
       });
   };
 
-  window.revealSpyManual = function () {
+  function spySetNote(text, kind) {
     var note = document.getElementById('spyNote');
-    if (note) note.style.display = 'block';
-    var builder = document.getElementById('builderForm');
-    if (builder) builder.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    kwMode('own');
-    var spy = document.getElementById('spyInput');
-    var own = document.getElementById('ownTerm');
-    if (spy && own && spy.value.trim() && !own.value) {
-      own.value = spy.value.trim();
-      own.focus();
+    if (!note) return;
+    note.hidden = !text;
+    note.textContent = text || '';
+    note.classList.remove('is-ok', 'is-err');
+    if (kind) note.classList.add(kind);
+  }
+
+  function parseSpyTarget(raw) {
+    raw = (raw || '').trim();
+    var domain = null;
+    var brand = raw;
+    var urlTry = raw.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+    var hostMatch = urlTry.match(/^([a-z0-9-]+(?:\.[a-z0-9-]+)+)(?:[\/?#]|$)/i);
+    if (hostMatch) {
+      domain = hostMatch[1].toLowerCase();
+      brand = domain.split('.')[0].replace(/[-_]+/g, ' ');
     }
+    brand = brand.replace(/\s+/g, ' ').trim();
+    var words = brand.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(function (w) {
+      return w.length >= 3;
+    });
+    return { raw: raw, domain: domain, brand: brand, words: words };
+  }
+
+  function ensureSelected(term, cluster) {
+    term = (term || '').trim();
+    if (!term) return false;
+    var key = term.toLowerCase();
+    if (selected.some(function (s) { return s.term.toLowerCase() === key; })) return false;
+    selected.push({ term: term, cluster: cluster || '' });
+    return true;
+  }
+
+  /** One-Click Spy: draft keywords from a business name / website into the builder. */
+  window.runOneClickSpy = function () {
+    if (!findForm()) return;
+    var spy = document.getElementById('spyInput');
+    var raw = spy ? spy.value.trim() : '';
+    if (!raw) {
+      spySetNote('Enter a business name or website first.', 'is-err');
+      if (spy) spy.focus();
+      return;
+    }
+
+    var target = parseSpyTarget(raw);
+    var brand = target.brand || raw;
+    var added = 0;
+    var fromLib = 0;
+
+    // 1) Match library terms to brand words / industry hints.
+    var hints = target.words.slice();
+    ['polaris', 'rzr', 'ranger', 'atv', 'utv', 'rv', 'airstream', 'dealer'].forEach(function (h) {
+      if (target.raw.toLowerCase().indexOf(h) !== -1 && hints.indexOf(h) === -1) hints.push(h);
+    });
+
+    document.querySelectorAll('#libList .libitem input[type="checkbox"]').forEach(function (cb) {
+      var term = (cb.getAttribute('data-term') || '').toLowerCase();
+      var cluster = cb.getAttribute('data-cluster') || '';
+      var hit = hints.some(function (w) { return term.indexOf(w) !== -1; });
+      if (hit) {
+        if (ensureSelected(cb.getAttribute('data-term'), cluster)) {
+          added++;
+          fromLib++;
+        }
+        cb.checked = true;
+      }
+    });
+
+    // 2) Always draft brand-intent keywords (core of One-Click Spy without LLM).
+    var brandTerms = [
+      { term: brand + ' dealer', cluster: 'Dealer intent' },
+      { term: brand + ' dealer near me', cluster: 'Dealer intent' },
+      { term: brand + ' for sale', cluster: 'Purchase intent' },
+      { term: brand + ' near me', cluster: 'Dealer intent' }
+    ];
+    brandTerms.forEach(function (item) {
+      if (ensureSelected(item.term, item.cluster)) added++;
+    });
+
+    // 3) If nothing from library matched, pull the Dealer intent starter pack.
+    if (fromLib === 0) {
+      document.querySelectorAll('#libList .libitem input[type="checkbox"]').forEach(function (cb) {
+        if ((cb.getAttribute('data-cluster') || '') !== 'Dealer intent') return;
+        if (ensureSelected(cb.getAttribute('data-term'), 'Dealer intent')) {
+          added++;
+          fromLib++;
+        }
+        cb.checked = true;
+      });
+    }
+
+    // 4) Mark their domain in the report highlighter when we got a website.
+    if (target.domain) {
+      var watch = document.querySelector('#builderForm input[name="watch_domains"]');
+      if (watch && !watch.value.trim()) watch.value = target.domain;
+      var siteSel = document.getElementById('sid');
+      if (siteSel) {
+        for (var i = 0; i < siteSel.options.length; i++) {
+          if ((siteSel.options[i].text || '').toLowerCase().indexOf(target.domain) !== -1) {
+            siteSel.selectedIndex = i;
+            break;
+          }
+        }
+      }
+    }
+
+    kwMode('lib');
+    syncLibChecks();
+    paintSelected();
+    renderPreview();
+
+    spySetNote(
+      'Drafted ' + selected.length + ' keyword' + (selected.length === 1 ? '' : 's') +
+        ' for “' + brand + '”. Add locations below, review the list, then Add to tracking.',
+      'is-ok'
+    );
+
+    var sel = document.getElementById('selKw');
+    if (sel) sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
+
+  // Back-compat for any leftover onclick handlers.
+  window.revealSpyManual = window.runOneClickSpy;
 
   window.renderPreview = function () {
     if (!findForm()) return;
@@ -574,6 +686,23 @@ window.changeDuration = function (el) {
         if (!v) return;
         addLocation(v);
         finder.value = '';
+      });
+    }
+
+    var spyBtn = document.getElementById('spyBtn');
+    var spyInput = document.getElementById('spyInput');
+    if (spyBtn) {
+      spyBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.runOneClickSpy();
+      });
+    }
+    if (spyInput) {
+      spyInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          window.runOneClickSpy();
+        }
       });
     }
   });

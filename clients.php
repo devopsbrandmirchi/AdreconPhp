@@ -94,7 +94,8 @@ $crumbs = is_admin()
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <?php if ($firstClientId): ?>
-      <a class="btn primary" href="<?= h($addHref) ?>">🔍 One-Click Spy</a>
+      <?php /* <a class="btn primary" href="<?= h($addHref) ?>">🔍 One-Click Spy</a> */ ?>
+      <a class="btn primary" href="<?= h($addHref) ?>">+ Add keywords</a>
     <?php endif; ?>
     <?php if (is_admin()): ?>
       <a class="btn dark" href="admin.php">+ Add dealer</a>

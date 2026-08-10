@@ -16,7 +16,7 @@ $clients = db()->query(
      ORDER BY COALESCE(a.name,'zzzz'), c.name"
 )->fetchAll();
 
-$people = db()->query('SELECT id, username, role FROM users ORDER BY role DESC, username')->fetchAll();
+$people = db()->query('SELECT id, username, email, role FROM users ORDER BY role DESC, username')->fetchAll();
 
 $grid = [];
 foreach (db()->query('SELECT user_id, client_id FROM user_clients')->fetchAll() as $r) {
@@ -26,140 +26,161 @@ foreach (db()->query('SELECT user_id, client_id FROM user_clients')->fetchAll() 
 $members = array_values(array_filter($people, fn($p) => $p['role'] !== 'admin'));
 $admins  = array_values(array_filter($people, fn($p) => $p['role'] === 'admin'));
 
+// agency_id => [client ids]
+$clientsByAgency = [];
+foreach ($clients as $c) {
+    $aid = (int)($c['agency_id'] ?? 0);
+    $clientsByAgency[$aid][] = (int)$c['id'];
+}
+
 render_head('Client access', $user);
 ?>
-<?= crumbs([['All clients', 'index.php'], ['Client access', null]]) ?>
+<?= crumbs([['Agencies', 'index.php'], ['Client access', null]]) ?>
 <div class="pagehead" style="margin-bottom:22px">
   <div>
     <h1 class="page">Client access</h1>
-    <p class="sub">Which clients each person can open. Tick the boxes and save once.
-      Administrators always see every client, so they are not listed here.</p>
+    <p class="sub">Admin only — you can see every agency and client. Assign users below, or add / edit / delete agencies and clients.</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn dark" href="#agencies">+ Add agency</a>
+    <a class="btn primary" href="#add-client">+ Add client</a>
   </div>
 </div>
 
 <div class="stats">
   <div class="stat"><p class="stat-label">Clients</p><p class="stat-value"><?= count($clients) ?></p></div>
-  <div class="stat"><p class="stat-label">Accounts</p><p class="stat-value"><?= count($people) ?></p></div>
+  <div class="stat"><p class="stat-label">Agencies</p><p class="stat-value"><?= count($agencies) ?></p></div>
   <div class="stat"><p class="stat-label">Administrators</p><p class="stat-value stat-ok"><?= count($admins) ?></p></div>
   <div class="stat"><p class="stat-label">Standard users</p><p class="stat-value"><?= count($members) ?></p></div>
 </div>
 
-<?php if (!$clients): ?>
-  <div class="panel panel-pad" style="margin-bottom:26px">
-    <p style="margin:0;color:var(--ink-2)">No clients yet. Add one below first.</p>
-  </div>
-<?php elseif (!$members): ?>
-  <div class="panel panel-pad" style="margin-bottom:26px">
+<div class="section-head" id="access"><h2>User access</h2></div>
+<p class="hint" style="margin:-8px 0 14px">Layout: <b>User</b> → <b>Clients</b> → <b>Agency</b>. Admins always have access to all agencies and clients (not listed here).</p>
+
+<?php if (!$members): ?>
+  <div class="card pad" style="margin-bottom:26px">
     <p style="margin:0;color:var(--ink-2)">
-      Every account so far is an administrator, and administrators see everything.
-      Create a standard user under <a href="users.php">Accounts</a> to start
-      granting access to particular clients.
+      No standard users yet. People who sign up appear here so you can grant clients.
     </p>
   </div>
+<?php elseif (!$clients): ?>
+  <div class="card pad" style="margin-bottom:26px">
+    <p style="margin:0;color:var(--ink-2)">No clients yet. <a href="#add-client">Add a client</a> first.</p>
+  </div>
 <?php else: ?>
-
-<div class="section-head"><h2>Who can see which client</h2></div>
-<div class="panel panel-pad" style="margin-bottom:26px">
-<form method="post" action="action.php">
-  <?= csrf_field() ?>
-  <input type="hidden" name="do" value="access_matrix">
-  <div class="matrix-wrap">
-    <table class="access-matrix">
-      <tr>
-        <th class="mx-corner">Client</th>
-        <?php foreach ($members as $m): ?>
-          <th class="mx-person"><span><?= h($m['username']) ?></span></th>
-        <?php endforeach; ?>
-      </tr>
-      <?php foreach ($clients as $c): ?>
-      <tr>
-        <td class="mx-client">
-          <a href="client.php?id=<?= (int)$c['id'] ?>"><?= h($c['name']) ?></a>
-          <span class="mx-meta"><?= (int)$c['schedules'] ?> keyword<?= (int)$c['schedules'] === 1 ? '' : 's' ?></span>
-        </td>
-        <?php foreach ($members as $m): ?>
-          <td class="mx-cell">
-            <label>
-              <input type="checkbox" name="grant[<?= (int)$m['id'] ?>][]" value="<?= (int)$c['id'] ?>"
-                <?= isset($grid[(int)$m['id']][(int)$c['id']]) ? 'checked' : '' ?>>
-            </label>
+  <div class="card" style="margin-bottom:26px;overflow:hidden">
+    <table class="access-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Clients</th>
+          <th>Agency</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      <?php foreach ($members as $m):
+        $uid = (int)$m['id'];
+        $assignedAgencyIds = [];
+        foreach ($clients as $c) {
+            if (!empty($grid[$uid][(int)$c['id']]) && !empty($c['agency_id'])) {
+                $assignedAgencyIds[(int)$c['agency_id']] = true;
+            }
+        }
+      ?>
+        <tr data-user-row="<?= $uid ?>">
+          <td>
+            <span class="access-user"><?= h($m['username']) ?></span><?php if (!empty($m['email'])): ?>
+            <span class="access-meta"><?= h((string)$m['email']) ?></span><?php endif; ?>
           </td>
-        <?php endforeach; ?>
-      </tr>
+          <td>
+            <form method="post" action="action.php" id="access-user-<?= $uid ?>" class="access-user-form">
+              <?= csrf_field() ?>
+              <input type="hidden" name="do" value="user_clients">
+              <input type="hidden" name="user_id" value="<?= $uid ?>">
+              <input type="hidden" name="redirect" value="admin.php">
+              <div class="access-clients" data-user-clients="<?= $uid ?>">
+                <?php foreach ($clients as $c):
+                  $cid = (int)$c['id'];
+                  $checked = !empty($grid[$uid][$cid]);
+                ?>
+                  <label class="access-chip">
+                    <input type="checkbox"
+                           name="client_ids[]"
+                           value="<?= $cid ?>"
+                           data-agency="<?= (int)($c['agency_id'] ?? 0) ?>"
+                           <?= $checked ? 'checked' : '' ?>>
+                    <span><?= h($c['name']) ?></span>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            </form>
+          </td>
+          <td>
+            <div class="access-agency-cell">
+              <select class="input access-agency-pick" data-for-user="<?= $uid ?>" aria-label="Grant agency clients">
+                <option value="">— Agency —</option>
+                <?php foreach ($agencies as $ag): ?>
+                  <option value="<?= (int)$ag['id'] ?>"><?= h($ag['name']) ?></option>
+                <?php endforeach; ?>
+                <option value="0">No agency</option>
+              </select>
+              <?php if ($assignedAgencyIds):
+                $names = [];
+                foreach ($agencies as $ag) {
+                    if (!empty($assignedAgencyIds[(int)$ag['id']])) {
+                        $names[] = $ag['name'];
+                    }
+                }
+              ?>
+                <span class="access-agency-linked" title="<?= h(implode(', ', $names)) ?>"><?= h(implode(', ', $names)) ?></span>
+              <?php endif; ?>
+            </div>
+          </td>
+          <td class="access-acts">
+            <button type="submit" form="access-user-<?= $uid ?>" class="btn sm">Save</button>
+            <form method="post" action="action.php" class="access-del-form"
+                  onsubmit="return confirm('Delete user <?= h(addslashes($m['username'])) ?>? Their keywords stay.')">
+              <?= csrf_field() ?>
+              <input type="hidden" name="do" value="user_delete">
+              <input type="hidden" name="user_id" value="<?= $uid ?>">
+              <input type="hidden" name="redirect" value="admin.php">
+              <button type="submit" class="btn sm btn-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
       <?php endforeach; ?>
+      </tbody>
     </table>
   </div>
-  <?php foreach ($members as $m): ?>
-    <input type="hidden" name="members[]" value="<?= (int)$m['id'] ?>">
-  <?php endforeach; ?>
-  <div style="margin-top:18px">
-    <button class="btn primary" type="submit">Save access</button>
-    <span class="hint" style="margin-left:10px">
-      Untick everything for someone and they can still sign in but will see nothing.
-      That is the tidy way to suspend access without deleting their account.
-    </span>
-  </div>
-</form>
-</div>
+  <p class="hint" style="margin:-10px 0 26px">Admins always see every agency and client. Use Agency to tick all clients in that agency, then Save.</p>
 <?php endif; ?>
-
-<div class="section-head"><h2>Clients</h2></div>
-<div class="card" style="margin-bottom:26px;overflow:hidden">
-  <?php foreach ($clients as $c): ?>
-  <div class="row" style="display:grid;grid-template-columns:1fr 170px 1.2fr 150px auto;gap:14px;align-items:center">
-    <form method="post" action="action.php" style="display:contents">
-      <?= csrf_field() ?>
-      <input type="hidden" name="do" value="client_update">
-      <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
-      <div><input class="input" type="text" name="name" value="<?= h($c['name']) ?>" required
-             aria-label="Client name"></div>
-      <div>
-        <select class="input" name="agency_id" aria-label="Agency">
-          <option value="0">No agency</option>
-          <?php foreach ($agencies as $ag): ?>
-            <option value="<?= (int)$ag['id'] ?>" <?= (int)$c['agency_id'] === (int)$ag['id'] ? 'selected' : '' ?>>
-              <?= h($ag['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div><input class="input" type="text" name="domains" value="<?= h((string)$c['domains']) ?>"
-             placeholder="theirdomain.com, another.com"></div>
-      <div style="font-size:14px;color:var(--ink-2)">
-        <?= (int)$c['schedules'] ?> keyword<?= (int)$c['schedules'] === 1 ? '' : 's' ?>,
-        <?= (int)$c['running'] ?> running
-      </div>
-      <div class="acts"><button type="submit" class="btn">Save</button></div>
-    </form>
-    <div class="acts" style="grid-column:1/-1;justify-content:flex-start;padding-top:4px">
-      <form method="post" action="action.php"
-            onsubmit="return confirm('Delete <?= h(addslashes($c['name'])) ?>, its websites, and all <?= (int)$c['schedules'] ?> of its keywords including everything they recorded? This cannot be undone.')">
-        <?= csrf_field() ?>
-        <input type="hidden" name="do" value="client_delete">
-        <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
-        <button type="submit" class="btn btn-danger">Delete this client</button>
-      </form>
-    </div>
-  </div>
-  <?php endforeach; ?>
-  <?php if (!$clients): ?>
-    <div class="card pad"><p style="margin:0;color:var(--ink-2)">No clients yet.</p></div>
-  <?php endif; ?>
-</div>
 
 <div class="section-head" id="agencies"><h2>Agencies</h2></div>
 <div class="card" style="margin-bottom:26px;overflow:hidden">
-  <?php foreach ($agencies as $ag): ?>
-  <div class="row" style="display:grid;grid-template-columns:1fr 160px auto;gap:14px;align-items:center">
-    <form method="post" action="action.php" style="display:contents">
+  <?php foreach ($agencies as $ag):
+    $n = 0;
+    foreach ($clients as $cc) {
+        if ((int)$cc['agency_id'] === (int)$ag['id']) {
+            $n++;
+        }
+    }
+  ?>
+  <div class="row access-edit-row">
+    <form method="post" action="action.php" class="access-edit-form">
       <?= csrf_field() ?>
       <input type="hidden" name="do" value="agency_update">
       <input type="hidden" name="agency_id" value="<?= (int)$ag['id'] ?>">
-      <div><input class="input" type="text" name="name" value="<?= h($ag['name']) ?>" required aria-label="Agency name"></div>
-      <div style="font-size:13px;color:var(--muted)">
-        <?php $n = 0; foreach ($clients as $cc) { if ((int)$cc['agency_id'] === (int)$ag['id']) { $n++; } } ?>
-        <?= $n ?> client<?= $n === 1 ? '' : 's' ?>
-      </div>
-      <div class="acts"><button type="submit" class="btn">Save</button></div>
+      <input class="input" type="text" name="name" value="<?= h($ag['name']) ?>" required aria-label="Agency name">
+      <span class="access-meta"><?= $n ?> client<?= $n === 1 ? '' : 's' ?></span>
+      <button type="submit" class="btn sm">Edit / Save</button>
+    </form>
+    <form method="post" action="action.php"
+          onsubmit="return confirm('Delete agency <?= h(addslashes($ag['name'])) ?>? Clients stay, they just lose this agency.')">
+      <?= csrf_field() ?>
+      <input type="hidden" name="do" value="agency_delete">
+      <input type="hidden" name="agency_id" value="<?= (int)$ag['id'] ?>">
+      <button type="submit" class="btn sm btn-danger">Delete</button>
     </form>
   </div>
   <?php endforeach; ?>
@@ -173,18 +194,52 @@ render_head('Client access', $user);
       </div>
       <div style="align-self:end"><button type="submit" class="btn primary">Add agency</button></div>
     </form>
-    <p class="hint" style="margin-top:10px">
-      An agency groups the clients you handle under one contract. Clients without
-      one still work, they just sit together under "No agency".
-    </p>
   </div>
 </div>
 
-<div class="section-head"><h2>Add a client</h2></div>
+<div class="section-head"><h2>Clients</h2></div>
+<div class="card" style="margin-bottom:26px;overflow:hidden">
+  <?php foreach ($clients as $c): ?>
+  <div class="row access-edit-row access-client-row">
+    <form method="post" action="action.php" class="access-edit-form access-client-form">
+      <?= csrf_field() ?>
+      <input type="hidden" name="do" value="client_update">
+      <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
+      <input type="hidden" name="redirect" value="admin.php">
+      <input class="input" type="text" name="name" value="<?= h($c['name']) ?>" required aria-label="Client name">
+      <select class="input" name="agency_id" aria-label="Agency">
+        <option value="0">No agency</option>
+        <?php foreach ($agencies as $ag): ?>
+          <option value="<?= (int)$ag['id'] ?>" <?= (int)$c['agency_id'] === (int)$ag['id'] ? 'selected' : '' ?>>
+            <?= h($ag['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <input class="input" type="text" name="domains" value="<?= h((string)$c['domains']) ?>"
+             placeholder="theirdomain.com">
+      <span class="access-meta"><?= (int)$c['schedules'] ?> kw</span>
+      <button type="submit" class="btn sm">Edit / Save</button>
+    </form>
+    <form method="post" action="action.php"
+          onsubmit="return confirm('Delete <?= h(addslashes($c['name'])) ?> and all its keywords? This cannot be undone.')">
+      <?= csrf_field() ?>
+      <input type="hidden" name="do" value="client_delete">
+      <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
+      <input type="hidden" name="redirect" value="admin.php">
+      <button type="submit" class="btn sm btn-danger">Delete</button>
+    </form>
+  </div>
+  <?php endforeach; ?>
+  <?php if (!$clients): ?>
+    <div class="card pad"><p style="margin:0;color:var(--ink-2)">No clients yet.</p></div>
+  <?php endif; ?>
+</div>
+
+<div class="section-head" id="add-client"><h2>Add a client</h2></div>
 <div class="card pad">
 <form method="post" action="action.php" class="grid">
   <?= csrf_field() ?>
   <input type="hidden" name="do" value="client_create">
+  <input type="hidden" name="redirect" value="admin.php">
   <div class="grid g2">
     <div class="field"><label for="cn">Client name</label>
       <input class="input" type="text" id="cn" name="name" placeholder="Client or business name" required></div>
@@ -200,10 +255,27 @@ render_head('Client access', $user);
   </div>
   <div style="margin-top:4px">
     <button class="btn primary" type="submit">Add client</button>
-    <span class="hint" style="margin-left:10px">
-      Domains listed here are flagged as theirs in every report.
-    </span>
   </div>
 </form>
 </div>
+
+<script>
+(function () {
+  document.querySelectorAll('.access-agency-pick').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      var uid = sel.getAttribute('data-for-user');
+      var aid = sel.value;
+      if (aid === '') return;
+      var box = document.querySelector('[data-user-clients="' + uid + '"]');
+      if (!box) return;
+      box.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+        if (String(cb.getAttribute('data-agency')) === String(aid)) {
+          cb.checked = true;
+        }
+      });
+      sel.value = '';
+    });
+  });
+})();
+</script>
 <?php render_foot(); ?>

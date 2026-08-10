@@ -8,7 +8,7 @@ $user = require_login();
 reap_stale_runs();
 expire_finished_trackers();
 
-// Non-admins skip the agencies board and go straight to their accounts.
+// Non-admins: agencies board is admin-only; go to dealers dashboard.
 if (!is_admin()) {
     redirect('clients.php');
 }

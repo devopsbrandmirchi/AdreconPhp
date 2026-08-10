@@ -31,9 +31,6 @@ function login_failures(string $ip, string $username): array {
 function record_login_failure(string $ip, string $username): void {
     db()->prepare('INSERT INTO login_attempts (ip, username, attempted_at) VALUES (?, ?, UTC_TIMESTAMP())')
         ->execute([$ip, mb_substr($username, 0, 60)]);
-    if (random_int(1, 20) === 1) {
-        db()->exec('DELETE FROM login_attempts WHERE attempted_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 DAY)');
-    }
 }
 
 function clear_login_failures(string $ip, string $username): void {
@@ -43,6 +40,7 @@ function clear_login_failures(string $ip, string $username): void {
 $error  = null;
 $locked = false;
 $ip     = client_ip();
+$flash  = flash();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -58,13 +56,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$username]);
         $u = $stmt->fetch();
         if ($u && password_verify($pass, (string)$u['password_hash'])) {
-            clear_login_failures($ip, $username);
-            $_SESSION['user_id'] = (int)$u['id'];
-            redirect('index.php');
+            if (($u['role'] ?? 'member') === 'admin') {
+                $error = 'Administrators sign in at Admin sign in.';
+                usleep(200000);
+            } else {
+                clear_login_failures($ip, $username);
+                $_SESSION['user_id'] = (int)$u['id'];
+                redirect('index.php');
+            }
+        } else {
+            record_login_failure($ip, $username);
+            $error = 'That username and password do not match. Check both and try again.';
+            usleep(400000);
         }
-        record_login_failure($ip, $username);
-        $error = 'That username and password do not match. Check both and try again.';
-        usleep(400000);
     }
 }
 ?><!doctype html>
@@ -79,9 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h1 class="login-title">Sign in</h1>
     <p class="login-sub">Competitive spy intelligence — see who is advertising on your keywords, and how often.</p>
 
+    <?php if ($flash): ?>
+      <div class="flash flash-<?= h($flash['type']) ?>"><?= h($flash['msg']) ?></div>
+    <?php endif; ?>
     <?php if ($error): ?><div class="flash flash-err"><?= h($error) ?></div><?php endif; ?>
 
-    <form method="post" class="login-form">
+    <form method="post" class="login-form" id="loginForm">
       <?= csrf_field() ?>
       <div class="field">
         <label for="username">Username</label>
@@ -95,6 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button class="btn primary" type="submit"<?= $locked ? ' disabled' : '' ?>>Sign in</button>
       </div>
     </form>
+
+    <p class="login-foot">
+      New here? <a href="signup.php">Create an account</a>
+    </p>
   </div>
 </div>
 </body></html>

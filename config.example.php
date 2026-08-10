@@ -55,4 +55,9 @@ return [
     'raw_retention_days' => 30,
 
     'default_timezone' => 'America/Chicago',
+
+    // Hardcoded admin login for /admin-login.php (optional overrides)
+    // Defaults in admin-login.php: admin / Adrecon@Admin1
+    'admin_hardcoded_user' => 'admin',
+    'admin_hardcoded_pass' => 'Adrecon@Admin1',
 ];

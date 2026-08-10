@@ -174,6 +174,10 @@ switch ($do) {
     case 'user_clients':
         require_admin();
         $uid = (int)($_POST['user_id'] ?? 0);
+        $back = (string)($_POST['redirect'] ?? '');
+        if ($back !== 'admin.php') {
+            $back = 'users.php';
+        }
         if ($uid > 0) {
             $pdo->prepare('DELETE FROM user_clients WHERE user_id = ?')->execute([$uid]);
             $assign = $pdo->prepare('INSERT IGNORE INTO user_clients (user_id, client_id) VALUES (?, ?)');
@@ -182,14 +186,18 @@ switch ($do) {
             }
             flash('Saved.');
         }
-        redirect('users.php');
+        redirect($back);
 
     case 'user_delete':
         require_admin();
         $uid = (int)($_POST['user_id'] ?? 0);
+        $back = (string)($_POST['redirect'] ?? '');
+        if ($back !== 'admin.php') {
+            $back = 'users.php';
+        }
         if ($uid === (int)current_user()['id']) {
             flash('You cannot delete your own account.', 'err');
-            redirect('users.php');
+            redirect($back);
         }
         // Never leave the system without an administrator.
         $admins = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'")->fetchColumn();
@@ -197,11 +205,11 @@ switch ($do) {
         $target->execute([$uid]);
         if ($target->fetchColumn() === 'admin' && $admins <= 1) {
             flash('That is the only administrator. Make someone else an administrator first.', 'err');
-            redirect('users.php');
+            redirect($back);
         }
         $pdo->prepare('DELETE FROM users WHERE id = ?')->execute([$uid]);
         flash('Account deleted. The keywords they set up are untouched.');
-        redirect('users.php');
+        redirect($back);
 
     case 'site_create':
         $cid = (int)($_POST['client_id'] ?? 0);
@@ -269,12 +277,26 @@ switch ($do) {
         }
         redirect('admin.php');
 
+    case 'agency_delete':
+        require_admin();
+        $aid = (int)($_POST['agency_id'] ?? 0);
+        if ($aid > 0) {
+            $pdo->prepare('UPDATE clients SET agency_id = NULL WHERE agency_id = ?')->execute([$aid]);
+            $pdo->prepare('DELETE FROM agencies WHERE id = ?')->execute([$aid]);
+            flash('Agency deleted. Its clients were kept (unassigned).');
+        }
+        redirect('admin.php');
+
     case 'client_create':
         $name    = trim((string)($_POST['name'] ?? ''));
         $domains = trim((string)($_POST['domains'] ?? ''));
+        $back    = (string)($_POST['redirect'] ?? '');
+        if ($back !== 'admin.php') {
+            $back = '';
+        }
         if ($name === '') {
             flash('Give the client a name.', 'err');
-            redirect('index.php');
+            redirect($back !== '' ? $back : 'index.php');
         }
         try {
             $agencyId = (int)($_POST['agency_id'] ?? 0) ?: null;
@@ -287,15 +309,22 @@ switch ($do) {
                     ->execute([current_user()['id'], $newId]);
             }
             flash('Client added.');
+            if ($back !== '') {
+                redirect($back);
+            }
             redirect('client.php?id=' . $newId);
         } catch (PDOException $e) {
             flash((int)$e->getCode() === 23000 ? 'A client with that name already exists.'
                                                : 'Could not save the client. Try again.', 'err');
         }
-        redirect('index.php');
+        redirect($back !== '' ? $back : 'index.php');
 
     case 'client_update':
         $cid = (int)($_POST['client_id'] ?? 0);
+        $back = (string)($_POST['redirect'] ?? '');
+        if ($back !== 'admin.php') {
+            $back = '';
+        }
         if (!can_see_client($cid)) {
             flash('You do not have access to that client.', 'err');
             redirect('index.php');
@@ -305,15 +334,19 @@ switch ($do) {
                        normalise_domain_list((string)$_POST['domains']) ?: null,
                        (int)($_POST['agency_id'] ?? 0) ?: null, $cid]);
         flash('Client updated.');
-        redirect('client.php?id=' . $cid);
+        redirect($back !== '' ? $back : ('client.php?id=' . $cid));
 
     case 'client_delete':
         require_admin();
         $cid = (int)($_POST['client_id'] ?? 0);
+        $back = (string)($_POST['redirect'] ?? '');
+        if ($back !== 'admin.php') {
+            $back = 'index.php';
+        }
         $pdo->prepare('DELETE FROM trackers WHERE client_id = ?')->execute([$cid]);
         $pdo->prepare('DELETE FROM clients WHERE id = ?')->execute([$cid]);
         flash('Client deleted, along with its websites and keywords.');
-        redirect('index.php');
+        redirect($back);
 
     case 'bulk':
         $op    = (string)($_POST['op'] ?? '');

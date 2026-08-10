@@ -277,7 +277,7 @@ echo crumbs($crumbTrail);
     <div class="card pad">
       <p style="margin:0;color:var(--ink-2)">
         No keywords tracked yet.
-        <a href="client.php?id=<?= $id ?>&amp;tab=add">Add the first ones with One-Click Spy</a><?php
+        <a href="client.php?id=<?= $id ?>&amp;tab=add">Add the first ones</a><?php
         if (!$sites): ?>, and add this client's website under the Websites tab so their own ads get highlighted<?php endif; ?>.
       </p>
     </div>
@@ -720,17 +720,47 @@ echo crumbs($crumbTrail);
 <h1 class="page">Add keywords</h1>
 <div class="sub">Pick from your library or add your own, choose where to track them — Adrecon checks every keyword in every location for you.</div>
 
-<div class="spy-banner">
-  <span class="spy-ico">🔍</span>
-  <b>One-Click Spy</b>
-  <input type="text" class="input" id="spyInput" style="flex:1;min-width:220px"
-         placeholder="…or paste a business name / website and we auto-build all of this for you"
-         aria-label="Business name or website">
-  <button type="button" class="btn primary" id="spyBtn" onclick="revealSpyManual()">Spy &amp; auto-fill</button>
-</div>
-<p class="hint" id="spyNote" style="margin:-12px 0 18px;display:none">
-  Auto-fill needs an LLM key (coming soon). The manual builder below is ready — pick keywords and locations now.
-</p>
+<?php
+  /*
+  // One-Click Spy — temporarily disabled (not needed right now).
+  $spyDefault = '';
+  if ($sites) {
+      $spyDefault = (string)$sites[0]['domain'];
+  } elseif (trim((string)($client['domains'] ?? '')) !== '') {
+      $parts = array_filter(array_map('trim', explode(',', (string)$client['domains'])));
+      $spyDefault = (string)($parts[0] ?? '');
+  } else {
+      $spyDefault = (string)$client['name'];
+  }
+?>
+<details class="spy-card card" id="spyCard"
+         data-client-name="<?= h((string)$client['name']) ?>">
+  <summary class="spy-summary">
+    <span class="spy-ico" aria-hidden="true">🔍</span>
+    <span class="spy-summary-text">
+      <strong>One-Click Spy</strong>
+      <span class="spy-summary-hint">Optional — paste a business name or website to auto-draft keywords</span>
+    </span>
+    <span class="spy-caret" aria-hidden="true">▾</span>
+  </summary>
+  <div class="spy-body">
+    <p class="section-d spy-body-desc">
+      Paste a business name or website. We’ll draft keywords into the builder below — then add locations and click Add to tracking.
+    </p>
+    <div class="spy-card-row">
+      <input type="text" class="input" id="spyInput"
+             value="<?= h($spyDefault) ?>"
+             placeholder="e.g. mckibbenpowersports.com or McKibben Powersports"
+             aria-label="Business name or website"
+             autocomplete="off">
+      <button type="button" class="btn primary" id="spyBtn">Spy &amp; auto-fill</button>
+    </div>
+    <p class="hint spy-note" id="spyNote" hidden></p>
+  </div>
+</details>
+<?php
+  */
+?>
 
 <form method="post" action="action.php" id="builderForm" data-builder="1">
   <?= csrf_field() ?>
