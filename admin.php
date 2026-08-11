@@ -55,7 +55,12 @@ render_head('Client access', $user);
 </div>
 
 <div class="section-head" id="access"><h2>User access</h2></div>
-<p class="hint" style="margin:-8px 0 14px">Layout: <b>User</b> → <b>Clients</b> → <b>Agency</b>. Admins always have access to all agencies and clients (not listed here).</p>
+<p class="hint" style="margin:-8px 0 14px">Open the <b>Clients</b> dropdown and tick dealers. Agency is optional — pick one to select its dealers. Agency choice is kept after Save.</p>
+
+<?php
+start_session();
+$savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
+?>
 
 <?php if (!$members): ?>
   <div class="card pad" style="margin-bottom:26px">
@@ -68,92 +73,125 @@ render_head('Client access', $user);
     <p style="margin:0;color:var(--ink-2)">No clients yet. <a href="#add-client">Add a client</a> first.</p>
   </div>
 <?php else: ?>
-  <div class="card" style="margin-bottom:26px;overflow:hidden">
-    <table class="access-table">
-      <thead>
-        <tr>
-          <th>User</th>
-          <th>Clients</th>
-          <th>Agency</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-      <?php foreach ($members as $m):
-        $uid = (int)$m['id'];
-        $assignedAgencyIds = [];
-        foreach ($clients as $c) {
-            if (!empty($grid[$uid][(int)$c['id']]) && !empty($c['agency_id'])) {
-                $assignedAgencyIds[(int)$c['agency_id']] = true;
-            }
-        }
-      ?>
-        <tr data-user-row="<?= $uid ?>">
-          <td>
-            <span class="access-user"><?= h($m['username']) ?></span><?php if (!empty($m['email'])): ?>
-            <span class="access-meta"><?= h((string)$m['email']) ?></span><?php endif; ?>
-          </td>
-          <td>
-            <form method="post" action="action.php" id="access-user-<?= $uid ?>" class="access-user-form">
-              <?= csrf_field() ?>
-              <input type="hidden" name="do" value="user_clients">
-              <input type="hidden" name="user_id" value="<?= $uid ?>">
-              <input type="hidden" name="redirect" value="admin.php">
-              <div class="access-clients" data-user-clients="<?= $uid ?>">
+  <div class="card access-list" style="margin-bottom:26px">
+    <div class="access-list-head">
+      <span>User</span>
+      <span>Clients</span>
+      <span>Agency</span>
+      <span>Save</span>
+      <span>Delete</span>
+    </div>
+    <?php foreach ($members as $m):
+      $uid = (int)$m['id'];
+      $agencySelected = array_key_exists($uid, $savedAgencyPick) ? (string)$savedAgencyPick[$uid] : '';
+    ?>
+      <div class="access-row" data-user-row="<?= $uid ?>">
+        <form method="post" action="action.php" class="access-user-form" id="access-save-<?= $uid ?>">
+          <?= csrf_field() ?>
+          <input type="hidden" name="do" value="user_clients">
+          <input type="hidden" name="user_id" value="<?= $uid ?>">
+          <input type="hidden" name="redirect" value="admin.php">
+
+          <div class="access-col-user">
+            <span class="access-user"><?= h($m['username']) ?></span>
+            <?php if (!empty($m['email'])): ?>
+              <span class="access-meta"><?= h((string)$m['email']) ?></span>
+            <?php endif; ?>
+          </div>
+
+          <div class="access-clients">
+            <?php
+              $selectedNames = [];
+              foreach ($clients as $c) {
+                  if (!empty($grid[$uid][(int)$c['id']])) {
+                      $selectedNames[] = (string)$c['name'];
+                  }
+              }
+              $msLabel = $selectedNames
+                  ? (count($selectedNames) <= 2
+                      ? implode(', ', $selectedNames)
+                      : count($selectedNames) . ' clients selected')
+                  : 'Select clients…';
+            ?>
+            <div class="ms-dropdown">
+              <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
+                <span class="ms-label"><?= h($msLabel) ?></span>
+                <span class="ms-caret">▾</span>
+              </button>
+              <div class="ms-panel" hidden role="listbox" aria-multiselectable="true">
                 <?php foreach ($clients as $c):
                   $cid = (int)$c['id'];
-                  $checked = !empty($grid[$uid][$cid]);
+                  $selected = !empty($grid[$uid][$cid]);
                 ?>
-                  <label class="access-chip">
+                  <label class="ms-option">
                     <input type="checkbox"
                            name="client_ids[]"
                            value="<?= $cid ?>"
                            data-agency="<?= (int)($c['agency_id'] ?? 0) ?>"
-                           <?= $checked ? 'checked' : '' ?>>
+                           <?= $selected ? 'checked' : '' ?>>
                     <span><?= h($c['name']) ?></span>
                   </label>
                 <?php endforeach; ?>
               </div>
-            </form>
-          </td>
-          <td>
-            <div class="access-agency-cell">
-              <select class="input access-agency-pick" data-for-user="<?= $uid ?>" aria-label="Grant agency clients">
-                <option value="">— Agency —</option>
-                <?php foreach ($agencies as $ag): ?>
-                  <option value="<?= (int)$ag['id'] ?>"><?= h($ag['name']) ?></option>
-                <?php endforeach; ?>
-                <option value="0">No agency</option>
-              </select>
-              <?php if ($assignedAgencyIds):
-                $names = [];
-                foreach ($agencies as $ag) {
-                    if (!empty($assignedAgencyIds[(int)$ag['id']])) {
-                        $names[] = $ag['name'];
-                    }
-                }
-              ?>
-                <span class="access-agency-linked" title="<?= h(implode(', ', $names)) ?>"><?= h(implode(', ', $names)) ?></span>
-              <?php endif; ?>
             </div>
-          </td>
-          <td class="access-acts">
-            <button type="submit" form="access-user-<?= $uid ?>" class="btn sm">Save</button>
-            <form method="post" action="action.php" class="access-del-form"
-                  onsubmit="return confirm('Delete user <?= h(addslashes($m['username'])) ?>? Their keywords stay.')">
-              <?= csrf_field() ?>
-              <input type="hidden" name="do" value="user_delete">
-              <input type="hidden" name="user_id" value="<?= $uid ?>">
-              <input type="hidden" name="redirect" value="admin.php">
-              <button type="submit" class="btn sm btn-danger">Delete</button>
-            </form>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
+          </div>
+
+          <div class="access-agency-cell">
+            <?php
+              $agencyLabel = '— Optional agency › —';
+              if ($agencySelected === '0') {
+                  $agencyLabel = 'No agency ›';
+              } elseif ($agencySelected !== '') {
+                  foreach ($agencies as $ag) {
+                      if ((string)(int)$ag['id'] === $agencySelected) {
+                          $agencyLabel = $ag['name'] . ' ›';
+                          break;
+                      }
+                  }
+              }
+            ?>
+            <div class="ms-dropdown ms-dropdown-single" data-agency-dd>
+              <input type="hidden" class="access-agency-pick" name="agency_pick" value="<?= h($agencySelected) ?>">
+              <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
+                <span class="ms-label"><?= h($agencyLabel) ?></span>
+                <span class="ms-caret">▾</span>
+              </button>
+              <div class="ms-panel" hidden role="listbox">
+                <button type="button" class="ms-option ms-pick<?= $agencySelected === '' ? ' is-on' : '' ?>" data-value="" data-label="— Optional agency › —">
+                  <span>— Optional agency › —</span>
+                </button>
+                <?php foreach ($agencies as $ag): ?>
+                  <button type="button"
+                          class="ms-option ms-pick<?= $agencySelected === (string)(int)$ag['id'] ? ' is-on' : '' ?>"
+                          data-value="<?= (int)$ag['id'] ?>"
+                          data-label="<?= h($ag['name']) ?> ›">
+                    <span><?= h($ag['name']) ?> ›</span>
+                  </button>
+                <?php endforeach; ?>
+                <button type="button" class="ms-option ms-pick<?= $agencySelected === '0' ? ' is-on' : '' ?>" data-value="0" data-label="No agency ›">
+                  <span>No agency ›</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="access-acts">
+            <button type="submit" class="btn sm">Save</button>
+          </div>
+        </form>
+
+        <form method="post" action="action.php" class="access-del-form"
+              onsubmit="return confirm('Delete user <?= h(addslashes($m['username'])) ?>? Their keywords stay.')">
+          <?= csrf_field() ?>
+          <input type="hidden" name="do" value="user_delete">
+          <input type="hidden" name="user_id" value="<?= $uid ?>">
+          <input type="hidden" name="redirect" value="admin.php">
+          <button type="submit" class="btn sm btn-danger">Delete</button>
+        </form>
+      </div>
+    <?php endforeach; ?>
   </div>
-  <p class="hint" style="margin:-10px 0 26px">Admins always see every agency and client. Use Agency to tick all clients in that agency, then Save.</p>
+  <p class="hint" style="margin:-10px 0 26px">Each Save updates <b>only that user</b>. Use the clients dropdown to multi-select dealers, optionally pick an agency, then Save.</p>
 <?php endif; ?>
 
 <div class="section-head" id="agencies"><h2>Agencies</h2></div>
@@ -198,39 +236,82 @@ render_head('Client access', $user);
 </div>
 
 <div class="section-head"><h2>Clients</h2></div>
-<div class="card" style="margin-bottom:26px;overflow:hidden">
-  <?php foreach ($clients as $c): ?>
-  <div class="row access-edit-row access-client-row">
-    <form method="post" action="action.php" class="access-edit-form access-client-form">
-      <?= csrf_field() ?>
-      <input type="hidden" name="do" value="client_update">
-      <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
-      <input type="hidden" name="redirect" value="admin.php">
-      <input class="input" type="text" name="name" value="<?= h($c['name']) ?>" required aria-label="Client name">
-      <select class="input" name="agency_id" aria-label="Agency">
-        <option value="0">No agency</option>
-        <?php foreach ($agencies as $ag): ?>
-          <option value="<?= (int)$ag['id'] ?>" <?= (int)$c['agency_id'] === (int)$ag['id'] ? 'selected' : '' ?>>
-            <?= h($ag['name']) ?></option>
-        <?php endforeach; ?>
-      </select>
-      <input class="input" type="text" name="domains" value="<?= h((string)$c['domains']) ?>"
-             placeholder="theirdomain.com">
-      <span class="access-meta"><?= (int)$c['schedules'] ?> kw</span>
-      <button type="submit" class="btn sm">Edit / Save</button>
-    </form>
-    <form method="post" action="action.php"
-          onsubmit="return confirm('Delete <?= h(addslashes($c['name'])) ?> and all its keywords? This cannot be undone.')">
-      <?= csrf_field() ?>
-      <input type="hidden" name="do" value="client_delete">
-      <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
-      <input type="hidden" name="redirect" value="admin.php">
-      <button type="submit" class="btn sm btn-danger">Delete</button>
-    </form>
+<div class="card client-edit-list" style="margin-bottom:26px">
+  <div class="client-edit-head">
+    <span>Client</span>
+    <span>Agency</span>
+    <span>Domain</span>
+    <span>Keywords</span>
+    <span>Save</span>
+    <span>Delete</span>
   </div>
-  <?php endforeach; ?>
   <?php if (!$clients): ?>
-    <div class="card pad"><p style="margin:0;color:var(--ink-2)">No clients yet.</p></div>
+    <div class="card pad" style="border:0;box-shadow:none;border-radius:0">
+      <p style="margin:0;color:var(--ink-2)">No clients yet.</p>
+    </div>
+  <?php else: ?>
+    <?php foreach ($clients as $c):
+      $cAid = (int)($c['agency_id'] ?? 0);
+      $cAgencyLabel = 'No agency ›';
+      if ($cAid > 0) {
+          foreach ($agencies as $ag) {
+              if ((int)$ag['id'] === $cAid) {
+                  $cAgencyLabel = $ag['name'] . ' ›';
+                  break;
+              }
+          }
+      }
+    ?>
+    <div class="client-edit-row">
+      <form method="post" action="action.php" class="client-edit-form">
+        <?= csrf_field() ?>
+        <input type="hidden" name="do" value="client_update">
+        <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
+        <input type="hidden" name="redirect" value="admin.php">
+
+        <input class="input" type="text" name="name" value="<?= h($c['name']) ?>" required aria-label="Client name" placeholder="Client name">
+
+        <div class="ms-dropdown ms-dropdown-single" data-agency-dd>
+          <input type="hidden" class="access-agency-pick" name="agency_id" value="<?= $cAid ?>">
+          <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
+            <span class="ms-label"><?= h($cAgencyLabel) ?></span>
+            <span class="ms-caret">▾</span>
+          </button>
+          <div class="ms-panel" hidden role="listbox">
+            <button type="button" class="ms-option ms-pick<?= $cAid === 0 ? ' is-on' : '' ?>" data-value="0" data-label="No agency ›">
+              <span>No agency ›</span>
+            </button>
+            <?php foreach ($agencies as $ag): ?>
+              <button type="button"
+                      class="ms-option ms-pick<?= $cAid === (int)$ag['id'] ? ' is-on' : '' ?>"
+                      data-value="<?= (int)$ag['id'] ?>"
+                      data-label="<?= h($ag['name']) ?> ›">
+                <span><?= h($ag['name']) ?> ›</span>
+              </button>
+            <?php endforeach; ?>
+          </div>
+        </div>
+
+        <input class="input" type="text" name="domains" value="<?= h((string)$c['domains']) ?>"
+               placeholder="theirdomain.com" aria-label="Domains">
+
+        <span class="client-edit-kw"><?= (int)$c['schedules'] ?> kw</span>
+
+        <div class="access-acts">
+          <button type="submit" class="btn sm">Edit / Save</button>
+        </div>
+      </form>
+
+      <form method="post" action="action.php" class="access-del-form"
+            onsubmit="return confirm('Delete <?= h(addslashes($c['name'])) ?> and all its keywords? This cannot be undone.')">
+        <?= csrf_field() ?>
+        <input type="hidden" name="do" value="client_delete">
+        <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
+        <input type="hidden" name="redirect" value="admin.php">
+        <button type="submit" class="btn sm btn-danger">Delete</button>
+      </form>
+    </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 
@@ -261,20 +342,100 @@ render_head('Client access', $user);
 
 <script>
 (function () {
-  document.querySelectorAll('.access-agency-pick').forEach(function (sel) {
-    sel.addEventListener('change', function () {
-      var uid = sel.getAttribute('data-for-user');
-      var aid = sel.value;
-      if (aid === '') return;
-      var box = document.querySelector('[data-user-clients="' + uid + '"]');
-      if (!box) return;
-      box.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
-        if (String(cb.getAttribute('data-agency')) === String(aid)) {
-          cb.checked = true;
-        }
-      });
-      sel.value = '';
+  function refreshClientLabel(dd) {
+    var label = dd.querySelector('.ms-label');
+    if (!label) return;
+    var checked = dd.querySelectorAll('.ms-option input[type="checkbox"]:checked');
+    if (!checked.length) {
+      label.textContent = 'Select clients…';
+      return;
+    }
+    var names = [];
+    checked.forEach(function (cb) {
+      var span = cb.parentNode.querySelector('span');
+      if (span) names.push(span.textContent.trim());
     });
+    label.textContent = names.length <= 2
+      ? names.join(', ')
+      : names.length + ' clients selected';
+  }
+
+  function closeAll(except) {
+    document.querySelectorAll('.ms-dropdown.is-open').forEach(function (dd) {
+      if (except && dd === except) return;
+      dd.classList.remove('is-open');
+      var panel = dd.querySelector('.ms-panel');
+      var btn = dd.querySelector('.ms-toggle');
+      if (panel) panel.hidden = true;
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
+    document.querySelectorAll('.access-row.is-ms-open, .client-edit-row.is-ms-open').forEach(function (row) {
+      if (!row.querySelector('.ms-dropdown.is-open')) row.classList.remove('is-ms-open');
+    });
+  }
+
+  function openDd(dd) {
+    dd.classList.add('is-open');
+    var row = dd.closest('.access-row, .client-edit-row');
+    if (row) row.classList.add('is-ms-open');
+    var panel = dd.querySelector('.ms-panel');
+    var btn = dd.querySelector('.ms-toggle');
+    if (panel) panel.hidden = false;
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+  }
+
+  document.querySelectorAll('.ms-dropdown').forEach(function (dd) {
+    var btn = dd.querySelector('.ms-toggle');
+    var panel = dd.querySelector('.ms-panel');
+    if (!btn || !panel) return;
+
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var open = dd.classList.contains('is-open');
+      closeAll();
+      if (!open) openDd(dd);
+    });
+
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+    panel.addEventListener('change', function () {
+      if (!dd.classList.contains('ms-dropdown-single')) refreshClientLabel(dd);
+    });
+  });
+
+  // Agency single-select: same dropdown UI, picks value + selects that agency's clients.
+  document.querySelectorAll('[data-agency-dd]').forEach(function (dd) {
+    var hidden = dd.querySelector('.access-agency-pick');
+    var label = dd.querySelector('.ms-label');
+    var form = dd.closest('.access-user-form');
+    dd.querySelectorAll('.ms-pick').forEach(function (opt) {
+      opt.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var val = opt.getAttribute('data-value');
+        var text = opt.getAttribute('data-label') || opt.textContent.trim();
+        if (hidden) hidden.value = val;
+        if (label) label.textContent = text;
+        dd.querySelectorAll('.ms-pick').forEach(function (p) { p.classList.remove('is-on'); });
+        opt.classList.add('is-on');
+
+        if (form && val !== '') {
+          var clientDd = form.querySelector('.access-clients .ms-dropdown');
+          if (clientDd) {
+            clientDd.querySelectorAll('.ms-option input[type="checkbox"]').forEach(function (cb) {
+              cb.checked = String(cb.getAttribute('data-agency') || '0') === String(val);
+            });
+            refreshClientLabel(clientDd);
+          }
+        }
+        closeAll();
+      });
+    });
+  });
+
+  document.addEventListener('click', function () { closeAll(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAll();
   });
 })();
 </script>

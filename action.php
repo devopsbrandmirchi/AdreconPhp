@@ -179,12 +179,35 @@ switch ($do) {
             $back = 'users.php';
         }
         if ($uid > 0) {
+            // Only rewrite THIS user — never touch other members.
+            $who = $pdo->prepare('SELECT username, role FROM users WHERE id = ?');
+            $who->execute([$uid]);
+            $row = $who->fetch();
+            if (!$row || ($row['role'] ?? '') === 'admin') {
+                flash('That user cannot be updated here.', 'err');
+                redirect($back);
+            }
             $pdo->prepare('DELETE FROM user_clients WHERE user_id = ?')->execute([$uid]);
             $assign = $pdo->prepare('INSERT IGNORE INTO user_clients (user_id, client_id) VALUES (?, ?)');
+            $n = 0;
             foreach ((array)($_POST['client_ids'] ?? []) as $cid) {
-                $assign->execute([$uid, (int)$cid]);
+                $cid = (int)$cid;
+                if ($cid <= 0) {
+                    continue;
+                }
+                $assign->execute([$uid, $cid]);
+                $n++;
             }
-            flash('Saved.');
+            // Keep the agency dropdown choice after Save (including blank / optional).
+            start_session();
+            if (!isset($_SESSION['access_agency_pick']) || !is_array($_SESSION['access_agency_pick'])) {
+                $_SESSION['access_agency_pick'] = [];
+            }
+            $agencyPick = (string)($_POST['agency_pick'] ?? '');
+            if ($agencyPick === '' || $agencyPick === '0' || ctype_digit($agencyPick)) {
+                $_SESSION['access_agency_pick'][$uid] = $agencyPick;
+            }
+            flash('Saved ' . $n . ' client' . ($n === 1 ? '' : 's') . ' for ' . (string)$row['username'] . '.');
         }
         redirect($back);
 

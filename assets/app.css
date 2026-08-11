@@ -53,6 +53,7 @@ header.topbar{
   background:#161b22;border:1px solid #2a2f37;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.45);z-index:80;padding:6px}
 .ctx-menu[hidden]{display:none !important}
 .ctx-pane{display:flex;flex-direction:column;gap:2px}
+.ctx-pane[hidden]{display:none !important}
 .ctx-item{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;
   padding:10px 12px;border:0;border-radius:8px;background:transparent;color:#e8eaed;font-size:13px;font-weight:600;
   font-family:inherit;cursor:pointer;text-decoration:none}
@@ -514,37 +515,47 @@ table.access-matrix th,table.access-matrix td{border-bottom:1px solid var(--line
 .mx-cell label:hover{background:var(--blue-150)}
 
 /* Admin client access — User | Clients | Agency (single-line rows) */
-.access-table{width:100%;border-collapse:collapse;font-size:13.5px;table-layout:fixed}
-.access-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:12px 14px;border-bottom:1px solid var(--line);background:#fafbfc;white-space:nowrap}
-.access-table td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
-.access-table th:nth-child(1),.access-table td:nth-child(1){width:20%}
-.access-table th:nth-child(2),.access-table td:nth-child(2){width:38%}
-.access-table th:nth-child(3),.access-table td:nth-child(3){width:26%}
-.access-table th:nth-child(4),.access-table td:nth-child(4){width:16%}
-.access-table td:nth-child(1){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.access-list{font-size:13.5px;overflow:visible !important;position:relative;z-index:1}
+.access-list-head{display:grid;grid-template-columns:minmax(140px,1.1fr) minmax(220px,2fr) minmax(160px,1.2fr) auto auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;background:#fafbfc;position:relative;z-index:0}
+.access-row{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);position:relative;overflow:visible;z-index:1;background:var(--surface-1)}
+.access-row.is-ms-open{z-index:200}
+.access-user-form{display:grid;grid-template-columns:minmax(140px,1.1fr) minmax(220px,2fr) minmax(160px,1.2fr) auto;gap:12px;align-items:center;flex:1;min-width:0;margin:0}
+.access-col-user{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .access-user{font-weight:700;color:var(--ink);display:inline}
 .access-meta{font-size:12px;color:var(--muted);display:inline;margin-left:6px}
 .access-meta::before{content:"· ";color:var(--muted)}
-.access-clients{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;overflow-x:auto;max-width:100%;padding-bottom:2px}
-.access-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;flex:none}
-.access-chip:has(input:checked){background:var(--blue-150);border-color:#c5daf5;color:var(--blue-dark)}
-.access-chip input{margin:0}
-.access-agency-cell{display:flex;align-items:center;gap:8px;min-width:0}
-.access-agency-pick{flex:1;min-width:0;max-width:100%;padding:7px 10px !important}
-.access-agency-linked{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42%}
+.access-clients{display:flex;flex-direction:column;gap:4px;min-width:0;position:relative}
+.ms-dropdown{position:relative;width:100%}
+.ms-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;background:#fff;position:relative;z-index:1}
+.ms-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;color:var(--ink)}
+.ms-caret{color:var(--muted);flex:none;font-size:11px}
+.ms-panel{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:300;max-height:220px;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(11,11,11,.18);padding:6px}
+.ms-panel[hidden]{display:none !important}
+.ms-option{display:flex;align-items:center;gap:8px;margin:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--ink);background:#fff;border:0;width:100%;text-align:left;font-family:inherit}
+.ms-option:hover{background:#f3f5f7}
+.ms-option.is-on{background:var(--blue-150);color:var(--blue-dark)}
+.ms-option input{margin:0;flex:none}
+.ms-dropdown.is-open{z-index:300}
+.access-agency-cell{display:flex;align-items:center;gap:8px;min-width:0;position:relative}
 .access-acts{display:flex;flex-direction:row;gap:8px;align-items:center;flex-wrap:nowrap;white-space:nowrap}
-.access-del-form{margin:0;display:inline}
+.access-del-form{margin:0;flex:none}
 .access-edit-row{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:nowrap}
 .access-edit-form{display:flex;gap:10px;align-items:center;flex:1;flex-wrap:nowrap;min-width:0}
 .access-edit-form .input{max-width:200px}
 .access-client-form .input{max-width:160px}
+
+/* Clients edit list — same grid/dropdown language as User access */
+.client-edit-list{font-size:13.5px;overflow:visible !important;position:relative;z-index:1}
+.client-edit-head{display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(150px,1.2fr) minmax(140px,1.2fr) 72px auto auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;background:#fafbfc}
+.client-edit-row{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);position:relative;overflow:visible;z-index:1;background:var(--surface-1)}
+.client-edit-row.is-ms-open{z-index:200}
+.client-edit-form{display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(150px,1.2fr) minmax(140px,1.2fr) 72px auto;gap:12px;align-items:center;flex:1;min-width:0;margin:0}
+.client-edit-form .input{width:100%;min-width:0;max-width:none}
+.client-edit-kw{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 @media (max-width:900px){
-  .access-table{table-layout:auto}
-  .access-table td{vertical-align:top}
-  .access-clients{flex-wrap:wrap}
-  .access-agency-cell{flex-direction:column;align-items:stretch}
-  .access-agency-linked{max-width:100%}
-  .access-acts{flex-wrap:wrap}
+  .access-list-head,.client-edit-head{display:none}
+  .access-row,.client-edit-row{flex-wrap:wrap}
+  .access-user-form,.client-edit-form{grid-template-columns:1fr;width:100%}
   .access-edit-row,.access-edit-form{flex-wrap:wrap}
 }
 .assign-list{display:flex;flex-wrap:wrap;gap:8px}

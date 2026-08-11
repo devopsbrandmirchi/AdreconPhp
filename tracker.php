@@ -176,7 +176,7 @@ echo crumbs(is_admin()
         [$t['keyword'], null],
       ]
     : [
-        ['My accounts', 'clients.php'],
+        ['My dealers', 'clients.php'],
         [$parentClient['name'] ?? 'Client', $parentClient ? 'client.php?id=' . (int)$parentClient['id'] : null],
         [$t['keyword'], null],
       ]);

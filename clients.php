@@ -12,6 +12,12 @@ expire_finished_trackers();
 
 $agencyFilter = isset($_GET['agency']) ? (int)$_GET['agency'] : -1;
 $agencyName = '';
+
+// Members never use the "No agency" folder — show all their dealers instead.
+if (!is_admin() && $agencyFilter === 0) {
+    redirect('clients.php');
+}
+
 if ($agencyFilter > 0) {
     $scope = "($scope) AND c.agency_id = ?";
     $scopeParams[] = $agencyFilter;
@@ -45,8 +51,8 @@ $stmt = db()->prepare($sql);
 $stmt->execute($scopeParams);
 $clients = $stmt->fetchAll();
 
-// Solo owner shortcut: one account under this agency → open it.
-if (count($clients) === 1 && $agencyFilter >= 0) {
+// Admin-only: one dealer under an agency → open it. Members always see the list.
+if (is_admin() && count($clients) === 1 && $agencyFilter > 0) {
     redirect('client.php?id=' . (int)$clients[0]['id']);
 }
 
@@ -75,7 +81,7 @@ $addHref = $firstClientId
     ? 'client.php?id=' . $firstClientId . '&tab=add'
     : (is_admin() ? 'admin.php' : 'clients.php');
 
-$title = $agencyName !== '' ? $agencyName : 'Clients';
+$title = $agencyName !== '' ? $agencyName : (is_admin() ? 'Clients' : 'Dealers');
 render_head($title, $user);
 
 $crumbs = is_admin()
@@ -131,12 +137,12 @@ $crumbs = is_admin()
     <input type="search" id="clientSearch" placeholder="Search dealers by name or website…"
            oninput="filterClientTable()" aria-label="Search dealers">
   </div>
-  <select class="input" id="statusFilter" onchange="filterClientTable()" style="width:auto" aria-label="Filter by status">
-    <option value="">All statuses</option>
+  <select class="input" id="statusFilter" onchange="filterClientTable()" style="width:auto" aria-label="Filter by status" autocomplete="off">
+    <option value="" selected>All statuses</option>
     <option value="running">Running</option>
     <option value="paused">Paused / no setup</option>
   </select>
-  <span class="chip ghost" id="clientCount"><?= count($clients) ?> dealers</span>
+  <span class="chip ghost" id="clientCount"><?= count($clients) ?> dealer<?= count($clients) === 1 ? '' : 's' ?></span>
 </div>
 
 <div class="card" style="overflow:hidden">
@@ -203,6 +209,11 @@ function filterClientTable() {
   var cnt = document.getElementById('clientCount');
   if (cnt) cnt.textContent = n + ' dealer' + (n === 1 ? '' : 's');
 }
+document.addEventListener('DOMContentLoaded', function () {
+  var sf = document.getElementById('statusFilter');
+  if (sf) sf.value = '';
+  filterClientTable();
+});
 </script>
 
 <?php render_foot(); ?>

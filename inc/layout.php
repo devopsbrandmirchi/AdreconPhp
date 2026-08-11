@@ -3,11 +3,14 @@ declare(strict_types=1);
 
 /**
  * Adrecon chrome — topbar + .wrap, with Agency → Client (dealer) switcher.
+ *
+ * Tree keys are real agency ids only (> 0). First pane = agencies (›) plus
+ * unassigned dealers. Agency pane = that agency's dealers only.
  */
 function nav_client_tree(): array {
-    static $tree = null;
-    if ($tree !== null) {
-        return $tree;
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
     }
     [$scope, $params] = client_scope_sql('c.id');
     $stmt = db()->prepare(
@@ -20,19 +23,36 @@ function nav_client_tree(): array {
     $stmt->execute($params);
     $rows = $stmt->fetchAll();
 
-    $tree = [];
+    $agencies = [];
+    $unassigned = [];
+    $dealers = [];
     foreach ($rows as $r) {
-        $aid = $r['agency_id'] !== null ? (int)$r['agency_id'] : 0;
-        $aname = $r['agency_name'] ?: 'No agency';
-        if (!isset($tree[$aid])) {
-            $tree[$aid] = ['id' => $aid, 'name' => $aname, 'clients' => []];
-        }
-        $tree[$aid]['clients'][] = [
+        $client = [
             'id'   => (int)$r['id'],
             'name' => (string)$r['name'],
         ];
+        $dealers[] = $client;
+        $aid = $r['agency_id'] !== null ? (int)$r['agency_id'] : 0;
+        if ($aid > 0) {
+            if (!isset($agencies[$aid])) {
+                $agencies[$aid] = [
+                    'id'      => $aid,
+                    'name'    => (string)($r['agency_name'] ?: 'Agency'),
+                    'clients' => [],
+                ];
+            }
+            $agencies[$aid]['clients'][] = $client;
+        } else {
+            $unassigned[] = $client;
+        }
     }
-    return $tree;
+
+    $cache = [
+        'agencies'   => $agencies,
+        'unassigned' => $unassigned,
+        'dealers'    => $dealers,
+    ];
+    return $cache;
 }
 
 /** Resolve what the topbar context label should show on this request. */
@@ -42,7 +62,7 @@ function nav_current_context(): array {
 
     $clientId = 0;
     $agencyId = null;
-    if (isset($_GET['agency'])) {
+    if (isset($_GET['agency']) && (int)$_GET['agency'] > 0) {
         $agencyId = (int)$_GET['agency'];
     }
 
@@ -55,25 +75,30 @@ function nav_current_context(): array {
             $st->execute([$tid]);
             $clientId = (int)$st->fetchColumn();
         }
-    } elseif ($script === 'clients.php' && isset($_GET['agency'])) {
+    } elseif ($script === 'clients.php' && isset($_GET['agency']) && (int)$_GET['agency'] > 0) {
         $agencyId = (int)$_GET['agency'];
     }
 
     $clientName = '';
     $agencyName = '';
     if ($clientId > 0) {
-        foreach ($tree as $ag) {
+        foreach ($tree['dealers'] as $c) {
+            if ($c['id'] === $clientId) {
+                $clientName = $c['name'];
+                break;
+            }
+        }
+        foreach ($tree['agencies'] as $ag) {
             foreach ($ag['clients'] as $c) {
                 if ($c['id'] === $clientId) {
-                    $clientName = $c['name'];
                     $agencyId = (int)$ag['id'];
                     $agencyName = $ag['name'];
                     break 2;
                 }
             }
         }
-    } elseif ($agencyId !== null && isset($tree[$agencyId])) {
-        $agencyName = $tree[$agencyId]['name'];
+    } elseif ($agencyId !== null && isset($tree['agencies'][$agencyId])) {
+        $agencyName = $tree['agencies'][$agencyId]['name'];
     }
 
     if ($clientName !== '') {
@@ -81,8 +106,12 @@ function nav_current_context(): array {
     } elseif ($agencyName !== '') {
         $label = $agencyName;
     } else {
-        $label = is_admin() ? 'All agencies' : 'My accounts';
+        $label = is_admin() ? 'All agencies' : 'My dealers';
     }
+
+    $onAll = ($script === 'index.php' || $script === 'clients.php')
+        && $agencyId === null
+        && $clientId === 0;
 
     return [
         'label'       => $label,
@@ -92,6 +121,7 @@ function nav_current_context(): array {
         'agency_name' => $agencyName,
         'tree'        => $tree,
         'on_agencies' => $script === 'index.php' && $agencyId === null && $clientId === 0,
+        'on_all'      => $onAll,
     ];
 }
 
@@ -124,45 +154,54 @@ function render_head(string $title, ?array $user = null): void {
     </button>
     <div class="ctx-menu" id="ctxMenu" hidden>
       <div class="ctx-pane" id="ctxAgencies">
-        <a class="ctx-item<?= !empty($ctx['on_agencies']) ? ' on' : '' ?>" href="<?= is_admin() ? 'index.php' : 'clients.php' ?>">
-          <span><?= is_admin() ? 'All agencies' : 'My accounts' ?></span>
+        <a class="ctx-item<?= !empty($ctx['on_all']) ? ' on' : '' ?>" href="<?= is_admin() ? 'index.php' : 'clients.php' ?>">
+          <span><?= is_admin() ? 'All agencies' : 'My dealers' ?></span>
         </a>
-        <?php if (!$ctx['tree']): ?>
-          <div class="ctx-empty">No accounts yet</div>
+        <?php
+          $ags = $ctx['tree']['agencies'] ?? [];
+          $unassigned = $ctx['tree']['unassigned'] ?? [];
+          $dealers = $ctx['tree']['dealers'] ?? [];
+        ?>
+        <?php if (!$dealers): ?>
+          <div class="ctx-empty">No dealers yet</div>
+        <?php elseif (count($dealers) === 1): ?>
+          <?php /* One dealer only — no agency layer, just the client. */ ?>
+          <div class="ctx-sep">Dealers</div>
+          <?php foreach ($dealers as $c): ?>
+            <a class="ctx-item<?= $ctx['client_id'] === (int)$c['id'] ? ' on' : '' ?>"
+               href="client.php?id=<?= (int)$c['id'] ?>">
+              <span><?= h($c['name']) ?></span>
+            </a>
+          <?php endforeach; ?>
         <?php else: ?>
-          <?php foreach ($ctx['tree'] as $ag):
-            $solo = count($ag['clients']) === 1;
-            $agencyHref = $solo
-                ? 'client.php?id=' . (int)$ag['clients'][0]['id']
-                : 'clients.php?agency=' . (int)$ag['id'];
-          ?>
-            <?php if ($solo): ?>
-              <a class="ctx-item<?= $ctx['agency_id'] === (int)$ag['id'] ? ' on' : '' ?>" href="<?= h($agencyHref) ?>">
-                <span><?= h($ag['name']) ?></span>
-                <span class="ctx-meta">solo</span>
-              </a>
-            <?php else: ?>
+          <?php if ($ags): ?>
+            <div class="ctx-sep">Agencies</div>
+            <?php foreach ($ags as $ag): ?>
               <button type="button" class="ctx-item ctx-agency-btn<?= $ctx['agency_id'] === (int)$ag['id'] && $ctx['client_id'] === 0 ? ' on' : '' ?>"
                       data-agency="<?= (int)$ag['id'] ?>">
                 <span><?= h($ag['name']) ?></span>
-                <span class="ctx-meta"><?= count($ag['clients']) ?> dealers ›</span>
+                <span class="ctx-meta"><?= count($ag['clients']) ?> ›</span>
               </button>
-            <?php endif; ?>
-          <?php endforeach; ?>
+            <?php endforeach; ?>
+          <?php endif; ?>
+          <?php if ($unassigned || !$ags): ?>
+            <div class="ctx-sep">Dealers</div>
+            <?php foreach (($unassigned ?: $dealers) as $c): ?>
+              <a class="ctx-item<?= $ctx['client_id'] === (int)$c['id'] ? ' on' : '' ?>"
+                 href="client.php?id=<?= (int)$c['id'] ?>">
+                <span><?= h($c['name']) ?></span>
+              </a>
+            <?php endforeach; ?>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
 
-      <?php foreach ($ctx['tree'] as $ag):
-        if (count($ag['clients']) <= 1) continue;
-      ?>
+      <?php if (count($dealers) > 1): ?>
+      <?php foreach ($ags as $ag): ?>
       <div class="ctx-pane ctx-clients" id="ctxClients-<?= (int)$ag['id'] ?>" hidden data-agency-pane="<?= (int)$ag['id'] ?>">
         <button type="button" class="ctx-item ctx-back" data-back="1">
           <span>‹ Agencies</span>
         </button>
-        <a class="ctx-item ctx-agency-all<?= $ctx['agency_id'] === (int)$ag['id'] && $ctx['client_id'] === 0 ? ' on' : '' ?>"
-           href="clients.php?agency=<?= (int)$ag['id'] ?>">
-          <span>All in <?= h($ag['name']) ?></span>
-        </a>
         <div class="ctx-sep">Dealers</div>
         <?php foreach ($ag['clients'] as $c): ?>
           <a class="ctx-item<?= $ctx['client_id'] === (int)$c['id'] ? ' on' : '' ?>"
@@ -172,6 +211,7 @@ function render_head(string $title, ?array $user = null): void {
         <?php endforeach; ?>
       </div>
       <?php endforeach; ?>
+      <?php endif; ?>
     </div>
   </div>
   <?php if (is_admin()): ?>

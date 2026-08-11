@@ -720,23 +720,38 @@ window.changeDuration = function (el) {
     var agencyPane = document.getElementById('ctxAgencies');
 
     function showPane(el) {
-      menu.querySelectorAll('.ctx-pane').forEach(function (p) { p.hidden = true; });
-      if (el) el.hidden = false;
+      menu.querySelectorAll('.ctx-pane').forEach(function (p) {
+        p.hidden = true;
+        p.setAttribute('hidden', '');
+      });
+      if (el) {
+        el.hidden = false;
+        el.removeAttribute('hidden');
+      }
     }
 
     function openMenu() {
       menu.hidden = false;
+      menu.removeAttribute('hidden');
       toggle.setAttribute('aria-expanded', 'true');
+      // If viewing a dealer under an agency, open that agency pane; else agencies list.
       var onClient = menu.querySelector('.ctx-clients a.ctx-item.on');
       if (onClient) {
         var pane = onClient.closest('.ctx-clients');
         if (pane) { showPane(pane); return; }
+      }
+      var onAgency = menu.querySelector('.ctx-agency-btn.on');
+      if (onAgency) {
+        var aid = onAgency.getAttribute('data-agency');
+        var ap = aid ? document.getElementById('ctxClients-' + aid) : null;
+        if (ap) { showPane(ap); return; }
       }
       showPane(agencyPane);
     }
 
     function closeMenu() {
       menu.hidden = true;
+      menu.setAttribute('hidden', '');
       toggle.setAttribute('aria-expanded', 'false');
       showPane(agencyPane);
     }
@@ -744,7 +759,7 @@ window.changeDuration = function (el) {
     toggle.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      if (menu.hidden) openMenu();
+      if (menu.hidden || menu.hasAttribute('hidden')) openMenu();
       else closeMenu();
     });
 

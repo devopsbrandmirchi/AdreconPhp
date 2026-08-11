@@ -195,7 +195,7 @@ $crumbTrail = is_admin()
         [$client['name'], $tab === 'add' ? 'client.php?id=' . $id : null],
       ]
     : [
-        ['My accounts', 'clients.php'],
+        ['My dealers', 'clients.php'],
         [$client['name'], $tab === 'add' ? 'client.php?id=' . $id : null],
       ];
 if ($tab === 'add') {
