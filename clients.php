@@ -145,62 +145,61 @@ $crumbs = is_admin()
   <span class="chip ghost" id="clientCount"><?= count($clients) ?> dealer<?= count($clients) === 1 ? '' : 's' ?></span>
 </div>
 
-<div class="card" style="overflow:hidden">
-  <table class="ctable" id="clientTable">
-    <thead>
-      <tr>
-        <th>Dealer</th>
-        <th>Status</th>
-        <th>Keywords</th>
-        <th style="text-align:center">Locations</th>
-        <th>Websites</th>
-        <th>Last checked</th>
-      </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($clients as $c):
-        $domains = $siteDomainsByClient[(int)$c['id']] ?? [];
-        if (!$domains) {
-            $domains = array_filter(array_map('trim', explode(',', (string)$c['domains'])));
-        }
-        $url = $domains[0] ?? '';
-        $running = (int)$c['running'] > 0;
-        $status = $running ? 'running' : 'paused';
-        $searchBlob = strtolower($c['name'] . ' ' . implode(' ', $domains));
-    ?>
-      <tr class="client-row" data-status="<?= $status ?>" data-search="<?= h($searchBlob) ?>"
-          onclick="window.location='client.php?id=<?= (int)$c['id'] ?>'">
-        <td>
-          <div class="cname"><?= h($c['name']) ?></div>
-          <div class="curl"><?= $url !== '' ? h($url) : 'no website yet' ?></div>
-        </td>
-        <td>
-          <?php if ($running): ?>
-            <span class="st-dot"><span class="dot" style="background:var(--good)"></span><?= (int)$c['running'] ?> running</span>
-          <?php else: ?>
-            <span class="st-dot"><span class="dot" style="background:#c7c9cd"></span>paused</span>
-          <?php endif; ?>
-        </td>
-        <td class="tabular"><?= (int)$c['schedules'] ?></td>
-        <td class="tabular" style="text-align:center"><?= (int)$c['locations'] ?></td>
-        <td class="tabular"><?= (int)$c['sites'] ?></td>
-        <td><?= h($c['last_run'] ? relative_time($c['last_run']) : 'never') ?></td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
+<div class="card dealer-list" id="clientTable">
+  <div class="dealer-list-head">
+    <span>Dealer</span>
+    <span>Status</span>
+    <span>Keywords</span>
+    <span>Locations</span>
+    <span>Websites</span>
+    <span>Last checked</span>
+  </div>
+  <?php foreach ($clients as $c):
+      $domains = $siteDomainsByClient[(int)$c['id']] ?? [];
+      if (!$domains) {
+          $domains = array_values(array_filter(array_map('trim', explode(',', (string)($c['domains'] ?? '')))));
+      }
+      $url = $domains[0] ?? '';
+      $running = (int)$c['running'] > 0;
+      $status = $running ? 'running' : 'paused';
+      $searchBlob = strtolower(trim((string)$c['name'] . ' ' . implode(' ', $domains)));
+      $href = 'client.php?id=' . (int)$c['id'];
+  ?>
+    <a class="dealer-row client-row"
+       href="<?= h($href) ?>"
+       data-status="<?= $status ?>"
+       data-search="<?= h($searchBlob) ?>">
+      <div class="dealer-main">
+        <div class="cname"><?= h((string)$c['name']) ?></div>
+        <div class="curl"><?= $url !== '' ? h($url) : 'no website yet' ?></div>
+      </div>
+      <div class="dealer-status">
+        <?php if ($running): ?>
+          <span class="st-dot"><span class="dot" style="background:var(--good)"></span><?= (int)$c['running'] ?> running</span>
+        <?php else: ?>
+          <span class="st-dot"><span class="dot" style="background:#c7c9cd"></span>paused</span>
+        <?php endif; ?>
+      </div>
+      <div class="tabular dealer-num"><?= (int)$c['schedules'] ?></div>
+      <div class="tabular dealer-num"><?= (int)$c['locations'] ?></div>
+      <div class="tabular dealer-num"><?= (int)$c['sites'] ?></div>
+      <div class="dealer-when"><?= h($c['last_run'] ? relative_time((string)$c['last_run']) : 'never') ?></div>
+    </a>
+  <?php endforeach; ?>
 </div>
 <?php endif; ?>
 
 <script>
 function filterClientTable() {
-  var q = (document.getElementById('clientSearch').value || '').toLowerCase().trim();
-  var sf = document.getElementById('statusFilter').value;
+  var searchEl = document.getElementById('clientSearch');
+  var filterEl = document.getElementById('statusFilter');
+  var q = ((searchEl && searchEl.value) || '').toLowerCase().trim();
+  var sf = (filterEl && filterEl.value) || '';
   var rows = document.querySelectorAll('#clientTable .client-row');
   var n = 0;
   rows.forEach(function (row) {
     var okQ = !q || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
-    var st = row.getAttribute('data-status');
+    var st = row.getAttribute('data-status') || '';
     var okS = !sf || (sf === 'running' ? st === 'running' : st !== 'running');
     var show = okQ && okS;
     row.style.display = show ? '' : 'none';
@@ -211,7 +210,7 @@ function filterClientTable() {
 }
 document.addEventListener('DOMContentLoaded', function () {
   var sf = document.getElementById('statusFilter');
-  if (sf) sf.value = '';
+  if (sf) sf.selectedIndex = 0;
   filterClientTable();
 });
 </script>
