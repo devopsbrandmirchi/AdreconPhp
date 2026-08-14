@@ -42,6 +42,7 @@ render_head('Client access', $user);
     <p class="sub">Admin only — you can see every agency and client. Assign users below, or add / edit / delete agencies and clients.</p>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn dark" href="#add-user">+ Add user</a>
     <a class="btn dark" href="#agencies">+ Add agency</a>
     <a class="btn primary" href="#add-client">+ Add client</a>
   </div>
@@ -62,10 +63,33 @@ start_session();
 $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
 ?>
 
+<div class="card pad" id="add-user" style="margin-bottom:18px">
+  <form method="post" action="action.php" class="grid">
+    <?= csrf_field() ?>
+    <input type="hidden" name="do" value="user_create">
+    <input type="hidden" name="redirect" value="admin.php">
+    <div class="grid g2" style="margin-bottom:10px">
+      <div class="field"><label for="new-un">Username</label>
+        <input class="input" type="text" id="new-un" name="username" required placeholder="new.user"></div>
+      <div class="field"><label for="new-em">Email (optional)</label>
+        <input class="input" type="email" id="new-em" name="email" placeholder="name@company.com"></div>
+      <div class="field"><label for="new-pw">Password</label>
+        <input class="input" type="text" id="new-pw" name="password" required
+               value="<?= h(bin2hex(random_bytes(6))) ?>"></div>
+      <div class="field"><label for="new-rl">Role</label>
+        <select class="input" id="new-rl" name="role">
+          <option value="member">Standard user</option>
+          <option value="admin">Administrator</option>
+        </select></div>
+    </div>
+    <button class="btn primary" type="submit">Create user</button>
+  </form>
+</div>
+
 <?php if (!$members): ?>
   <div class="card pad" style="margin-bottom:26px">
     <p style="margin:0;color:var(--ink-2)">
-      No standard users yet. People who sign up appear here so you can grant clients.
+      No standard users yet. Create one above, then grant clients here.
     </p>
   </div>
 <?php elseif (!$clients): ?>
@@ -175,9 +199,7 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
             </div>
           </div>
 
-          <div class="access-acts">
-            <button type="submit" class="btn sm">Save</button>
-          </div>
+          <button type="submit" class="btn sm access-col-btn">Save</button>
         </form>
 
         <form method="post" action="action.php" class="access-del-form"
@@ -186,7 +208,7 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
           <input type="hidden" name="do" value="user_delete">
           <input type="hidden" name="user_id" value="<?= $uid ?>">
           <input type="hidden" name="redirect" value="admin.php">
-          <button type="submit" class="btn sm btn-danger">Delete</button>
+          <button type="submit" class="btn sm btn-danger access-col-btn">Delete</button>
         </form>
       </div>
     <?php endforeach; ?>
@@ -205,13 +227,14 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
     }
   ?>
   <div class="row access-edit-row">
-    <form method="post" action="action.php" class="access-edit-form">
+    <form method="post" action="action.php" class="access-edit-form" id="agency-save-<?= (int)$ag['id'] ?>">
       <?= csrf_field() ?>
       <input type="hidden" name="do" value="agency_update">
       <input type="hidden" name="agency_id" value="<?= (int)$ag['id'] ?>">
-      <input class="input" type="text" name="name" value="<?= h($ag['name']) ?>" required aria-label="Agency name">
+      <input class="input" type="text" name="name" value="<?= h($ag['name']) ?>" required aria-label="Agency name" id="agency-name-<?= (int)$ag['id'] ?>">
       <span class="access-meta"><?= $n ?> client<?= $n === 1 ? '' : 's' ?></span>
-      <button type="submit" class="btn sm">Edit / Save</button>
+      <button type="button" class="btn sm" onclick="document.getElementById('agency-name-<?= (int)$ag['id'] ?>').focus()">Edit</button>
+      <button type="submit" class="btn sm">Save</button>
     </form>
     <form method="post" action="action.php"
           onsubmit="return confirm('Delete agency <?= h(addslashes($ag['name'])) ?>? Clients stay, they just lose this agency.')">
@@ -242,6 +265,7 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
     <span>Agency</span>
     <span>Domain</span>
     <span>Keywords</span>
+    <span>Edit</span>
     <span>Save</span>
     <span>Delete</span>
   </div>
@@ -261,15 +285,16 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
               }
           }
       }
+      $cid = (int)$c['id'];
     ?>
     <div class="client-edit-row">
-      <form method="post" action="action.php" class="client-edit-form">
+      <form method="post" action="action.php" class="client-edit-form" id="client-save-<?= $cid ?>">
         <?= csrf_field() ?>
         <input type="hidden" name="do" value="client_update">
-        <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
+        <input type="hidden" name="client_id" value="<?= $cid ?>">
         <input type="hidden" name="redirect" value="admin.php">
 
-        <input class="input" type="text" name="name" value="<?= h($c['name']) ?>" required aria-label="Client name" placeholder="Client name">
+        <input class="input" type="text" name="name" id="client-name-<?= $cid ?>" value="<?= h($c['name']) ?>" required aria-label="Client name" placeholder="Client name">
 
         <div class="ms-dropdown ms-dropdown-single" data-agency-dd>
           <input type="hidden" class="access-agency-pick" name="agency_id" value="<?= $cAid ?>">
@@ -297,18 +322,17 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
 
         <span class="client-edit-kw"><?= (int)$c['schedules'] ?> kw</span>
 
-        <div class="access-acts">
-          <button type="submit" class="btn sm">Edit / Save</button>
-        </div>
+        <button type="button" class="btn sm access-col-btn" onclick="document.getElementById('client-name-<?= $cid ?>').focus()">Edit</button>
+        <button type="submit" class="btn sm access-col-btn">Save</button>
       </form>
 
       <form method="post" action="action.php" class="access-del-form"
             onsubmit="return confirm('Delete <?= h(addslashes($c['name'])) ?> and all its keywords? This cannot be undone.')">
         <?= csrf_field() ?>
         <input type="hidden" name="do" value="client_delete">
-        <input type="hidden" name="client_id" value="<?= (int)$c['id'] ?>">
+        <input type="hidden" name="client_id" value="<?= $cid ?>">
         <input type="hidden" name="redirect" value="admin.php">
-        <button type="submit" class="btn sm btn-danger">Delete</button>
+        <button type="submit" class="btn sm btn-danger access-col-btn">Delete</button>
       </form>
     </div>
     <?php endforeach; ?>

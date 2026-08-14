@@ -122,18 +122,22 @@ switch ($do) {
         $em   = trim((string)($_POST['email'] ?? ''));
         $pw   = (string)($_POST['password'] ?? '');
         $role = ($_POST['role'] ?? 'member') === 'admin' ? 'admin' : 'member';
+        $back = (string)($_POST['redirect'] ?? '');
+        if ($back !== 'admin.php') {
+            $back = 'users.php';
+        }
 
         if (!preg_match('/^[A-Za-z0-9._-]{3,60}$/', $un)) {
             flash('Usernames are 3 to 60 characters: letters, numbers, dot, dash or underscore.', 'err');
-            redirect('users.php');
+            redirect($back);
         }
         if (strlen($pw) < 8) {
             flash('Use a password of at least 8 characters.', 'err');
-            redirect('users.php');
+            redirect($back);
         }
         if ($em !== '' && !filter_var($em, FILTER_VALIDATE_EMAIL)) {
             flash('That email address is not valid.', 'err');
-            redirect('users.php');
+            redirect($back);
         }
         try {
             $pdo->prepare('INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)')
@@ -149,7 +153,7 @@ switch ($do) {
             flash((int)$e->getCode() === 23000 ? 'That username is already taken.'
                                                : 'Could not create that account. Try again.', 'err');
         }
-        redirect('users.php');
+        redirect($back === 'admin.php' ? 'admin.php#access' : $back);
 
     case 'access_matrix':
         require_admin();
