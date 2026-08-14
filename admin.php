@@ -64,25 +64,23 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
 ?>
 
 <div class="card pad" id="add-user" style="margin-bottom:18px">
-  <form method="post" action="action.php" class="grid">
+  <form method="post" action="action.php" class="add-user-form">
     <?= csrf_field() ?>
     <input type="hidden" name="do" value="user_create">
     <input type="hidden" name="redirect" value="admin.php">
-    <div class="grid g2" style="margin-bottom:10px">
-      <div class="field"><label for="new-un">Username</label>
-        <input class="input" type="text" id="new-un" name="username" required placeholder="new.user"></div>
-      <div class="field"><label for="new-em">Email (optional)</label>
-        <input class="input" type="email" id="new-em" name="email" placeholder="name@company.com"></div>
-      <div class="field"><label for="new-pw">Password</label>
-        <input class="input" type="text" id="new-pw" name="password" required
-               value="<?= h(bin2hex(random_bytes(6))) ?>"></div>
-      <div class="field"><label for="new-rl">Role</label>
-        <select class="input" id="new-rl" name="role">
-          <option value="member">Standard user</option>
-          <option value="admin">Administrator</option>
-        </select></div>
-    </div>
-    <button class="btn primary" type="submit">Create user</button>
+    <div class="field"><label for="new-un">Username</label>
+      <input class="input" type="text" id="new-un" name="username" required placeholder="new.user"></div>
+    <div class="field"><label for="new-em">Email (optional)</label>
+      <input class="input" type="email" id="new-em" name="email" placeholder="name@company.com"></div>
+    <div class="field"><label for="new-pw">Password</label>
+      <input class="input" type="text" id="new-pw" name="password" required
+             value="<?= h(bin2hex(random_bytes(6))) ?>"></div>
+    <div class="field"><label for="new-rl">Role</label>
+      <select class="input" id="new-rl" name="role">
+        <option value="member">Standard user</option>
+        <option value="admin">Administrator</option>
+      </select></div>
+    <button class="btn primary add-user-submit" type="submit">Create user</button>
   </form>
 </div>
 
@@ -108,99 +106,90 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
     <?php foreach ($members as $m):
       $uid = (int)$m['id'];
       $agencySelected = array_key_exists($uid, $savedAgencyPick) ? (string)$savedAgencyPick[$uid] : '';
+      $formId = 'access-save-' . $uid;
+      $selectedNames = [];
+      foreach ($clients as $c) {
+          if (!empty($grid[$uid][(int)$c['id']])) {
+              $selectedNames[] = (string)$c['name'];
+          }
+      }
+      $msLabel = $selectedNames
+          ? (count($selectedNames) <= 2
+              ? implode(', ', $selectedNames)
+              : count($selectedNames) . ' clients selected')
+          : 'Select clients…';
+      $agencyLabel = '— Optional agency › —';
+      if ($agencySelected === '0') {
+          $agencyLabel = 'No agency ›';
+      } elseif ($agencySelected !== '') {
+          foreach ($agencies as $ag) {
+              if ((string)(int)$ag['id'] === $agencySelected) {
+                  $agencyLabel = $ag['name'] . ' ›';
+                  break;
+              }
+          }
+      }
     ?>
       <div class="access-row" data-user-row="<?= $uid ?>">
-        <form method="post" action="action.php" class="access-user-form" id="access-save-<?= $uid ?>">
-          <?= csrf_field() ?>
-          <input type="hidden" name="do" value="user_clients">
-          <input type="hidden" name="user_id" value="<?= $uid ?>">
-          <input type="hidden" name="redirect" value="admin.php">
+        <div class="access-col-user">
+          <span class="access-user"><?= h($m['username']) ?></span>
+          <?php if (!empty($m['email'])): ?>
+            <span class="access-meta"><?= h((string)$m['email']) ?></span>
+          <?php endif; ?>
+        </div>
 
-          <div class="access-col-user">
-            <span class="access-user"><?= h($m['username']) ?></span>
-            <?php if (!empty($m['email'])): ?>
-              <span class="access-meta"><?= h((string)$m['email']) ?></span>
-            <?php endif; ?>
-          </div>
-
-          <div class="access-clients">
-            <?php
-              $selectedNames = [];
-              foreach ($clients as $c) {
-                  if (!empty($grid[$uid][(int)$c['id']])) {
-                      $selectedNames[] = (string)$c['name'];
-                  }
-              }
-              $msLabel = $selectedNames
-                  ? (count($selectedNames) <= 2
-                      ? implode(', ', $selectedNames)
-                      : count($selectedNames) . ' clients selected')
-                  : 'Select clients…';
-            ?>
-            <div class="ms-dropdown">
-              <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
-                <span class="ms-label"><?= h($msLabel) ?></span>
-                <span class="ms-caret">▾</span>
-              </button>
-              <div class="ms-panel" hidden role="listbox" aria-multiselectable="true">
-                <?php foreach ($clients as $c):
-                  $cid = (int)$c['id'];
-                  $selected = !empty($grid[$uid][$cid]);
-                ?>
-                  <label class="ms-option">
-                    <input type="checkbox"
-                           name="client_ids[]"
-                           value="<?= $cid ?>"
-                           data-agency="<?= (int)($c['agency_id'] ?? 0) ?>"
-                           <?= $selected ? 'checked' : '' ?>>
-                    <span><?= h($c['name']) ?></span>
-                  </label>
-                <?php endforeach; ?>
-              </div>
+        <div class="access-clients">
+          <div class="ms-dropdown">
+            <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
+              <span class="ms-label"><?= h($msLabel) ?></span>
+              <span class="ms-caret">▾</span>
+            </button>
+            <div class="ms-panel" hidden role="listbox" aria-multiselectable="true">
+              <?php foreach ($clients as $c):
+                $cid = (int)$c['id'];
+                $selected = !empty($grid[$uid][$cid]);
+              ?>
+                <label class="ms-option">
+                  <input type="checkbox"
+                         form="<?= h($formId) ?>"
+                         name="client_ids[]"
+                         value="<?= $cid ?>"
+                         data-agency="<?= (int)($c['agency_id'] ?? 0) ?>"
+                         <?= $selected ? 'checked' : '' ?>>
+                  <span><?= h($c['name']) ?></span>
+                </label>
+              <?php endforeach; ?>
             </div>
           </div>
+        </div>
 
-          <div class="access-agency-cell">
-            <?php
-              $agencyLabel = '— Optional agency › —';
-              if ($agencySelected === '0') {
-                  $agencyLabel = 'No agency ›';
-              } elseif ($agencySelected !== '') {
-                  foreach ($agencies as $ag) {
-                      if ((string)(int)$ag['id'] === $agencySelected) {
-                          $agencyLabel = $ag['name'] . ' ›';
-                          break;
-                      }
-                  }
-              }
-            ?>
-            <div class="ms-dropdown ms-dropdown-single" data-agency-dd>
-              <input type="hidden" class="access-agency-pick" name="agency_pick" value="<?= h($agencySelected) ?>">
-              <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
-                <span class="ms-label"><?= h($agencyLabel) ?></span>
-                <span class="ms-caret">▾</span>
+        <div class="access-agency-cell">
+          <div class="ms-dropdown ms-dropdown-single" data-agency-dd>
+            <input type="hidden" form="<?= h($formId) ?>" class="access-agency-pick" name="agency_pick" value="<?= h($agencySelected) ?>">
+            <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
+              <span class="ms-label"><?= h($agencyLabel) ?></span>
+              <span class="ms-caret">▾</span>
+            </button>
+            <div class="ms-panel" hidden role="listbox">
+              <button type="button" class="ms-option ms-pick<?= $agencySelected === '' ? ' is-on' : '' ?>" data-value="" data-label="— Optional agency › —">
+                <span>— Optional agency › —</span>
               </button>
-              <div class="ms-panel" hidden role="listbox">
-                <button type="button" class="ms-option ms-pick<?= $agencySelected === '' ? ' is-on' : '' ?>" data-value="" data-label="— Optional agency › —">
-                  <span>— Optional agency › —</span>
+              <?php foreach ($agencies as $ag): ?>
+                <button type="button"
+                        class="ms-option ms-pick<?= $agencySelected === (string)(int)$ag['id'] ? ' is-on' : '' ?>"
+                        data-value="<?= (int)$ag['id'] ?>"
+                        data-label="<?= h($ag['name']) ?> ›">
+                  <span><?= h($ag['name']) ?> ›</span>
                 </button>
-                <?php foreach ($agencies as $ag): ?>
-                  <button type="button"
-                          class="ms-option ms-pick<?= $agencySelected === (string)(int)$ag['id'] ? ' is-on' : '' ?>"
-                          data-value="<?= (int)$ag['id'] ?>"
-                          data-label="<?= h($ag['name']) ?> ›">
-                    <span><?= h($ag['name']) ?> ›</span>
-                  </button>
-                <?php endforeach; ?>
-                <button type="button" class="ms-option ms-pick<?= $agencySelected === '0' ? ' is-on' : '' ?>" data-value="0" data-label="No agency ›">
-                  <span>No agency ›</span>
-                </button>
-              </div>
+              <?php endforeach; ?>
+              <button type="button" class="ms-option ms-pick<?= $agencySelected === '0' ? ' is-on' : '' ?>" data-value="0" data-label="No agency ›">
+                <span>No agency ›</span>
+              </button>
             </div>
           </div>
+        </div>
 
-          <button type="submit" class="btn sm access-col-btn">Save</button>
-        </form>
+        <button type="submit" form="<?= h($formId) ?>" class="btn sm access-col-btn">Save</button>
 
         <form method="post" action="action.php" class="access-del-form"
               onsubmit="return confirm('Delete user <?= h(addslashes($m['username'])) ?>? Their keywords stay.')">
@@ -211,6 +200,12 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
           <button type="submit" class="btn sm btn-danger access-col-btn">Delete</button>
         </form>
       </div>
+      <form method="post" action="action.php" id="<?= h($formId) ?>" class="access-save-fields">
+        <?= csrf_field() ?>
+        <input type="hidden" name="do" value="user_clients">
+        <input type="hidden" name="user_id" value="<?= $uid ?>">
+        <input type="hidden" name="redirect" value="admin.php">
+      </form>
     <?php endforeach; ?>
   </div>
   <p class="hint" style="margin:-10px 0 26px">Each Save updates <b>only that user</b>. Use the clients dropdown to multi-select dealers, optionally pick an agency, then Save.</p>
@@ -231,12 +226,14 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
       <?= csrf_field() ?>
       <input type="hidden" name="do" value="agency_update">
       <input type="hidden" name="agency_id" value="<?= (int)$ag['id'] ?>">
-      <input class="input" type="text" name="name" value="<?= h($ag['name']) ?>" required aria-label="Agency name" id="agency-name-<?= (int)$ag['id'] ?>">
+      <input class="input access-edit-name" type="text" name="name" value="<?= h($ag['name']) ?>" required aria-label="Agency name" id="agency-name-<?= (int)$ag['id'] ?>">
       <span class="access-meta"><?= $n ?> client<?= $n === 1 ? '' : 's' ?></span>
-      <button type="button" class="btn sm" onclick="document.getElementById('agency-name-<?= (int)$ag['id'] ?>').focus()">Edit</button>
-      <button type="submit" class="btn sm">Save</button>
+      <div class="access-edit-actions">
+        <button type="button" class="btn sm" onclick="document.getElementById('agency-name-<?= (int)$ag['id'] ?>').focus()">Edit</button>
+        <button type="submit" class="btn sm">Save</button>
+      </div>
     </form>
-    <form method="post" action="action.php"
+    <form method="post" action="action.php" class="access-edit-del"
           onsubmit="return confirm('Delete agency <?= h(addslashes($ag['name'])) ?>? Clients stay, they just lose this agency.')">
       <?= csrf_field() ?>
       <input type="hidden" name="do" value="agency_delete">
@@ -246,14 +243,14 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
   </div>
   <?php endforeach; ?>
   <div class="card pad" style="border:0;border-radius:0;box-shadow:none;border-top:1px solid var(--line)">
-    <form method="post" action="action.php" class="formrow">
+    <form method="post" action="action.php" class="agency-add-form">
       <?= csrf_field() ?>
       <input type="hidden" name="do" value="agency_create">
-      <div>
+      <div class="agency-add-field">
         <label for="agn">Add an agency</label>
         <input class="input" type="text" id="agn" name="name" placeholder="Wheeler Advertising" required>
       </div>
-      <div style="align-self:end"><button type="submit" class="btn primary">Add agency</button></div>
+      <button type="submit" class="btn primary">Add agency</button>
     </form>
   </div>
 </div>
@@ -286,45 +283,39 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
           }
       }
       $cid = (int)$c['id'];
+      $cFormId = 'client-save-' . $cid;
     ?>
-    <div class="client-edit-row">
-      <form method="post" action="action.php" class="client-edit-form" id="client-save-<?= $cid ?>">
-        <?= csrf_field() ?>
-        <input type="hidden" name="do" value="client_update">
-        <input type="hidden" name="client_id" value="<?= $cid ?>">
-        <input type="hidden" name="redirect" value="admin.php">
+    <div class="client-edit-row" data-client-row="<?= $cid ?>">
+      <input class="input" form="<?= h($cFormId) ?>" type="text" name="name" id="client-name-<?= $cid ?>" value="<?= h($c['name']) ?>" required aria-label="Client name" placeholder="Client name">
 
-        <input class="input" type="text" name="name" id="client-name-<?= $cid ?>" value="<?= h($c['name']) ?>" required aria-label="Client name" placeholder="Client name">
-
-        <div class="ms-dropdown ms-dropdown-single" data-agency-dd>
-          <input type="hidden" class="access-agency-pick" name="agency_id" value="<?= $cAid ?>">
-          <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
-            <span class="ms-label"><?= h($cAgencyLabel) ?></span>
-            <span class="ms-caret">▾</span>
+      <div class="ms-dropdown ms-dropdown-single" data-agency-dd>
+        <input type="hidden" form="<?= h($cFormId) ?>" class="access-agency-pick" name="agency_id" value="<?= $cAid ?>">
+        <button type="button" class="ms-toggle input" aria-haspopup="listbox" aria-expanded="false">
+          <span class="ms-label"><?= h($cAgencyLabel) ?></span>
+          <span class="ms-caret">▾</span>
+        </button>
+        <div class="ms-panel" hidden role="listbox">
+          <button type="button" class="ms-option ms-pick<?= $cAid === 0 ? ' is-on' : '' ?>" data-value="0" data-label="No agency ›">
+            <span>No agency ›</span>
           </button>
-          <div class="ms-panel" hidden role="listbox">
-            <button type="button" class="ms-option ms-pick<?= $cAid === 0 ? ' is-on' : '' ?>" data-value="0" data-label="No agency ›">
-              <span>No agency ›</span>
+          <?php foreach ($agencies as $ag): ?>
+            <button type="button"
+                    class="ms-option ms-pick<?= $cAid === (int)$ag['id'] ? ' is-on' : '' ?>"
+                    data-value="<?= (int)$ag['id'] ?>"
+                    data-label="<?= h($ag['name']) ?> ›">
+              <span><?= h($ag['name']) ?> ›</span>
             </button>
-            <?php foreach ($agencies as $ag): ?>
-              <button type="button"
-                      class="ms-option ms-pick<?= $cAid === (int)$ag['id'] ? ' is-on' : '' ?>"
-                      data-value="<?= (int)$ag['id'] ?>"
-                      data-label="<?= h($ag['name']) ?> ›">
-                <span><?= h($ag['name']) ?> ›</span>
-              </button>
-            <?php endforeach; ?>
-          </div>
+          <?php endforeach; ?>
         </div>
+      </div>
 
-        <input class="input" type="text" name="domains" value="<?= h((string)$c['domains']) ?>"
-               placeholder="theirdomain.com" aria-label="Domains">
+      <input class="input" form="<?= h($cFormId) ?>" type="text" name="domains" value="<?= h((string)$c['domains']) ?>"
+             placeholder="theirdomain.com" aria-label="Domains">
 
-        <span class="client-edit-kw"><?= (int)$c['schedules'] ?> kw</span>
+      <span class="client-edit-kw"><?= (int)$c['schedules'] ?> kw</span>
 
-        <button type="button" class="btn sm access-col-btn" onclick="document.getElementById('client-name-<?= $cid ?>').focus()">Edit</button>
-        <button type="submit" class="btn sm access-col-btn">Save</button>
-      </form>
+      <button type="button" class="btn sm access-col-btn" onclick="document.getElementById('client-name-<?= $cid ?>').focus()">Edit</button>
+      <button type="submit" form="<?= h($cFormId) ?>" class="btn sm access-col-btn">Save</button>
 
       <form method="post" action="action.php" class="access-del-form"
             onsubmit="return confirm('Delete <?= h(addslashes($c['name'])) ?> and all its keywords? This cannot be undone.')">
@@ -335,32 +326,34 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
         <button type="submit" class="btn sm btn-danger access-col-btn">Delete</button>
       </form>
     </div>
+    <form method="post" action="action.php" id="<?= h($cFormId) ?>" class="access-save-fields">
+      <?= csrf_field() ?>
+      <input type="hidden" name="do" value="client_update">
+      <input type="hidden" name="client_id" value="<?= $cid ?>">
+      <input type="hidden" name="redirect" value="admin.php">
+    </form>
     <?php endforeach; ?>
   <?php endif; ?>
 </div>
 
 <div class="section-head" id="add-client"><h2>Add a client</h2></div>
 <div class="card pad">
-<form method="post" action="action.php" class="grid">
+<form method="post" action="action.php" class="add-client-form">
   <?= csrf_field() ?>
   <input type="hidden" name="do" value="client_create">
   <input type="hidden" name="redirect" value="admin.php">
-  <div class="grid g2">
-    <div class="field"><label for="cn">Client name</label>
-      <input class="input" type="text" id="cn" name="name" placeholder="Client or business name" required></div>
-    <div class="field"><label for="cd">Domains, comma separated</label>
-      <input class="input" type="text" id="cd" name="domains" placeholder="theirdomain.com, another.com"></div>
-    <div class="field"><label for="cag">Agency</label>
-      <select class="input" id="cag" name="agency_id">
-        <option value="0">No agency</option>
-        <?php foreach ($agencies as $ag): ?>
-          <option value="<?= (int)$ag['id'] ?>"><?= h($ag['name']) ?></option>
-        <?php endforeach; ?>
-      </select></div>
-  </div>
-  <div style="margin-top:4px">
-    <button class="btn primary" type="submit">Add client</button>
-  </div>
+  <div class="field"><label for="cn">Client name</label>
+    <input class="input" type="text" id="cn" name="name" placeholder="Client or business name" required></div>
+  <div class="field"><label for="cd">Domains, comma separated</label>
+    <input class="input" type="text" id="cd" name="domains" placeholder="theirdomain.com, another.com"></div>
+  <div class="field"><label for="cag">Agency</label>
+    <select class="input" id="cag" name="agency_id">
+      <option value="0">No agency</option>
+      <?php foreach ($agencies as $ag): ?>
+        <option value="<?= (int)$ag['id'] ?>"><?= h($ag['name']) ?></option>
+      <?php endforeach; ?>
+    </select></div>
+  <button class="btn primary add-client-submit" type="submit">Add client</button>
 </form>
 </div>
 
@@ -431,7 +424,6 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
   document.querySelectorAll('[data-agency-dd]').forEach(function (dd) {
     var hidden = dd.querySelector('.access-agency-pick');
     var label = dd.querySelector('.ms-label');
-    var form = dd.closest('.access-user-form');
     dd.querySelectorAll('.ms-pick').forEach(function (opt) {
       opt.addEventListener('click', function (e) {
         e.preventDefault();
@@ -443,8 +435,9 @@ $savedAgencyPick = $_SESSION['access_agency_pick'] ?? [];
         dd.querySelectorAll('.ms-pick').forEach(function (p) { p.classList.remove('is-on'); });
         opt.classList.add('is-on');
 
-        if (form && val !== '') {
-          var clientDd = form.querySelector('.access-clients .ms-dropdown');
+        var row = dd.closest('.access-row');
+        if (row && val !== '') {
+          var clientDd = row.querySelector('.access-clients .ms-dropdown');
           if (clientDd) {
             clientDd.querySelectorAll('.ms-option input[type="checkbox"]').forEach(function (cb) {
               cb.checked = String(cb.getAttribute('data-agency') || '0') === String(val);

@@ -535,22 +535,24 @@ table.access-matrix th,table.access-matrix td{border-bottom:1px solid var(--line
 .access-list{font-size:13.5px;overflow:visible !important;position:relative;z-index:1}
 .access-list-head,.access-row{
   display:grid;
-  grid-template-columns:minmax(140px,1.1fr) minmax(200px,1.8fr) minmax(160px,1.3fr) 72px 72px;
+  grid-template-columns:minmax(140px,1.1fr) minmax(200px,1.8fr) minmax(160px,1.3fr) 80px 84px;
   gap:12px;
   align-items:center;
   padding:12px 14px;
+  box-sizing:border-box;
+  width:100%;
 }
 .access-list-head{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;background:#fafbfc;border-bottom:1px solid var(--line);position:relative;z-index:0}
+.access-list-head > span:nth-child(4),
+.access-list-head > span:nth-child(5){text-align:center}
 .access-row{border-bottom:1px solid var(--line);position:relative;overflow:visible;z-index:1;background:var(--surface-1)}
 .access-row.is-ms-open{z-index:200}
-.access-user-form > input[type="hidden"],
-.client-edit-form > input[type="hidden"],
-.access-del-form > input[type="hidden"]{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.access-save-fields{display:none !important}
 .access-col-user{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .access-user{font-weight:700;color:var(--ink);display:inline}
 .access-meta{font-size:12px;color:var(--muted);display:inline;margin-left:6px}
 .access-meta::before{content:"· ";color:var(--muted)}
-.access-clients{display:flex;flex-direction:column;gap:4px;min-width:0;position:relative}
+.access-clients{min-width:0;position:relative}
 .ms-dropdown{position:relative;width:100%}
 .ms-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;background:#fff;position:relative;z-index:1}
 .ms-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;color:var(--ink)}
@@ -562,34 +564,48 @@ table.access-matrix th,table.access-matrix td{border-bottom:1px solid var(--line
 .ms-option.is-on{background:var(--blue-150);color:var(--blue-dark)}
 .ms-option input{margin:0;flex:none}
 .ms-dropdown.is-open{z-index:300}
-.access-agency-cell{display:flex;align-items:center;gap:8px;min-width:0;position:relative}
-.access-col-btn{width:100%;justify-content:center;padding-left:8px;padding-right:8px}
-.access-del-form{margin:0;display:contents}
-.access-del-form > .access-col-btn,.access-del-form > .btn{width:100%;justify-content:center}
+.access-agency-cell{min-width:0;position:relative}
+.access-col-btn{width:100%;justify-content:center;padding-left:6px;padding-right:6px;box-sizing:border-box;white-space:nowrap;min-width:0}
+.access-del-form{margin:0;display:block;min-width:0}
+.access-del-form .access-col-btn{width:100%}
 .access-edit-row{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:nowrap}
 .access-edit-form{display:flex;gap:10px;align-items:center;flex:1;flex-wrap:nowrap;min-width:0}
-.access-edit-form .input{max-width:200px}
+.access-edit-form .access-edit-name{flex:1;min-width:160px;max-width:none}
+.access-edit-actions{display:flex;gap:8px;align-items:center;margin-left:auto;flex:none}
+.access-edit-del{margin:0;flex:none}
+.agency-add-form{display:flex;gap:12px;align-items:end}
+.agency-add-field{flex:1;min-width:0}
+.agency-add-field label{display:block;margin-bottom:6px}
+.agency-add-form .btn{flex:none;margin-left:auto}
+.add-user-form,.add-client-form{display:flex;gap:12px;align-items:end;flex-wrap:nowrap}
+.add-user-form .field,.add-client-form .field{flex:1;min-width:0;margin:0}
+.add-user-form .field label,.add-client-form .field label{display:block;margin-bottom:6px}
+.add-user-form .add-user-submit,.add-client-form .add-client-submit{flex:none;white-space:nowrap;align-self:end}
+@media (max-width:900px){
+  .add-user-form,.add-client-form{flex-wrap:wrap}
+  .add-user-form .field,.add-client-form .field{min-width:calc(50% - 12px)}
+}
 
 /* Clients edit list — same aligned grid */
 .client-edit-list{font-size:13.5px;overflow:visible !important;position:relative;z-index:1}
 .client-edit-head,.client-edit-row{
   display:grid;
-  grid-template-columns:minmax(120px,1.2fr) minmax(140px,1.2fr) minmax(120px,1.1fr) 64px 64px 64px 72px;
+  grid-template-columns:minmax(140px,1.4fr) minmax(150px,1.3fr) minmax(140px,1.2fr) 100px 88px 88px 92px;
   gap:10px;
   align-items:center;
   padding:12px 14px;
+  box-sizing:border-box;
+  width:100%;
 }
 .client-edit-head{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;background:#fafbfc;border-bottom:1px solid var(--line)}
+.client-edit-head > span:nth-child(n+4){text-align:center}
 .client-edit-row{border-bottom:1px solid var(--line);position:relative;overflow:visible;z-index:1;background:var(--surface-1)}
 .client-edit-row.is-ms-open{z-index:200}
-.client-edit-form{display:contents}
-.client-edit-form .input{width:100%;min-width:0;max-width:none}
-.client-edit-kw{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.client-edit-row > .input{width:100%;min-width:0;max-width:none}
+.client-edit-kw{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;text-align:center}
 @media (max-width:900px){
   .access-list-head,.client-edit-head{display:none}
   .access-row,.client-edit-row{display:flex;flex-wrap:wrap}
-  .access-user-form,.client-edit-form,.access-del-form{display:flex;flex-wrap:wrap;gap:10px;width:100%;align-items:center}
-  .access-user-form{flex:1}
   .access-col-btn{width:auto}
   .access-edit-row,.access-edit-form{flex-wrap:wrap}
 }
